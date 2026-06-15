@@ -1,36 +1,2031 @@
--- Correctif auth : s'assurer que le trigger crée bien le profil
--- et que les policies acceptent les sessions Supabase
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+<title>AppPray</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+// ═══════════════════════════════════════════════════════
+// SUPABASE CONFIG
+// ═══════════════════════════════════════════════════════
+const SUPA_URL = 'https://boaqhboeubgcfenimbwm.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJvYXFoYm9ldWJnY2ZlbmltYndtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA5NTkzMjQsImV4cCI6MjA5NjUzNTMyNH0.QHCO5DAEmJBOmRvnIn0OHS34ImIM0vZ7g98elKPfX3Q';
+const supa = supabase.createClient(SUPA_URL, SUPA_KEY);
+var currentUser = null;
+var currentProfile = null;
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;0,700;1,300;1,400;1,600&family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+:root{--flame:#C8102E;--flame-deep:#8B0A1E;--flame-glow:rgba(200,16,46,0.15);--gold:#C9A84C;--gold-light:#E8CA6A;--gold-glow:rgba(201,168,76,0.12);--void:#06060A;--abyss:#0C0C14;--deep:#121218;--surface:#1A1A24;--lift:#22222E;--lift2:#2A2A38;--border:rgba(255,255,255,0.07);--border-hi:rgba(255,255,255,0.13);--border-gold:rgba(201,168,76,0.22);--border-flame:rgba(200,16,46,0.3);--text:#F0EBE0;--text-dim:rgba(240,235,224,0.6);--text-muted:rgba(240,235,224,0.32);--green:#2ECC71;--blue:#5B9BD5;--font-display:'Cormorant Garamond',Georgia,serif;--font-title:'Bebas Neue',sans-serif;--font-ui:'DM Sans',sans-serif;--ease-out:cubic-bezier(0.16,1,0.3,1);--ease-spring:cubic-bezier(0.34,1.56,0.64,1)}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{background:var(--void);color:var(--text);font-family:var(--font-ui);max-width:480px;margin:0 auto;-webkit-font-smoothing:antialiased}
+body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:998;opacity:0.6;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E")}
+#app{position:fixed;inset:0;max-width:480px;margin:0 auto;overflow:hidden}
+.page{position:absolute;inset:0;display:flex;flex-direction:column;opacity:0;pointer-events:none;transition:opacity 0.3s var(--ease-out),transform 0.3s var(--ease-out);transform:translateY(8px)}
+.page.active{opacity:1;pointer-events:all;transform:translateY(0)}
+.scroll-area{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch}
+.scroll-area::-webkit-scrollbar{width:3px}
+.scroll-area::-webkit-scrollbar-thumb{background:var(--border-hi);border-radius:2px}
+/* TOPBAR */
+.topbar{flex-shrink:0;background:rgba(6,6,10,0.96);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);height:58px;display:flex;align-items:center;justify-content:space-between;padding:0 1rem;z-index:100}
+.logo{font-family:var(--font-title);font-size:1.5rem;letter-spacing:0.1em;line-height:1}.logo .r{color:var(--flame)}
+.topbar-right{display:flex;align-items:center;gap:0.55rem}
+.lang-btn{font-family:var(--font-ui);font-size:0.52rem;font-weight:500;letter-spacing:0.15em;color:var(--text-muted);border:1px solid var(--border);padding:0.25rem 0.55rem;background:none;cursor:pointer;transition:all 0.2s}
+.lang-btn:hover{color:var(--gold);border-color:var(--border-gold)}
+.tb-btn{width:34px;height:34px;display:flex;align-items:center;justify-content:center;background:var(--surface);border:1px solid var(--border);border-radius:50%;cursor:pointer;font-size:0.9rem;transition:all 0.2s;position:relative}
+.tb-btn:hover{border-color:var(--border-flame)}
+.notif-dot{position:absolute;top:5px;right:5px;width:8px;height:8px;border-radius:50%;background:var(--flame);border:1.5px solid var(--void)}
+.av-btn{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--flame-deep),var(--flame));border:2px solid var(--border-hi);cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:var(--font-title);font-size:0.9rem;color:white}
+.topbar-live{display:flex;align-items:center;gap:0.4rem;background:var(--surface);border:1px solid var(--border-flame);padding:0.28rem 0.65rem;cursor:pointer;transition:all 0.2s}
+.live-dot{width:6px;height:6px;border-radius:50%;background:var(--flame);animation:livePulse 1.8s ease-in-out infinite}
+@keyframes livePulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.5;transform:scale(0.7)}}
+.live-txt{font-family:var(--font-ui);font-size:0.55rem;letter-spacing:0.08em;color:var(--text-dim)}
+.live-txt strong{color:var(--flame);font-weight:600}
+/* BOTTOM NAV */
+.bottom-nav{flex-shrink:0;background:rgba(6,6,10,0.97);backdrop-filter:blur(20px);border-top:1px solid var(--border);display:flex;height:62px;z-index:100}
+.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0.22rem;cursor:pointer;background:none;border:none;color:var(--text-muted);transition:color 0.2s;-webkit-tap-highlight-color:transparent}
+.nav-item:hover{color:var(--text-dim)}.nav-item.active{color:var(--flame)}
+.nav-icon{font-size:1.15rem;line-height:1}
+.nav-label{font-family:var(--font-ui);font-size:0.44rem;font-weight:500;letter-spacing:0.1em;text-transform:uppercase}
+.nav-center{flex:1;display:flex;align-items:center;justify-content:center}
+.nav-center-btn{width:48px;height:48px;background:var(--flame);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.3rem;cursor:pointer;border:3px solid var(--void);box-shadow:0 0 0 1px var(--border-flame),0 8px 24px rgba(200,16,46,0.4);transition:transform 0.2s var(--ease-spring),background 0.2s}
+.nav-center-btn:hover{transform:scale(1.08);background:var(--flame-deep)}.nav-center-btn:active{transform:scale(0.95)}
+/* TABS */
+.tabs{display:flex;background:var(--abyss);border-bottom:1px solid var(--border);flex-shrink:0}
+.tab{flex:1;padding:0.85rem 0.4rem;font-family:var(--font-ui);font-size:0.52rem;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-muted);background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;transition:all 0.2s}
+.tab:hover{color:var(--text-dim)}.tab.active{color:var(--flame);border-bottom-color:var(--flame)}
+.tab-badge{background:var(--flame);color:white;font-size:0.42rem;padding:0.08rem 0.3rem;margin-left:0.3rem}
+/* AUTH */
+.auth-bg{position:absolute;inset:0;background:radial-gradient(ellipse 70% 50% at 50% 35%,rgba(200,16,46,0.15),transparent 65%);pointer-events:none}
+.auth-orb{position:absolute;top:5%;left:50%;transform:translateX(-50%);width:280px;height:280px;border-radius:50%;background:radial-gradient(circle at 40% 40%,rgba(200,16,46,0.22),transparent 70%);filter:blur(50px);animation:orbp 6s ease-in-out infinite}
+@keyframes orbp{0%,100%{transform:translateX(-50%) scale(1);opacity:.7}50%{transform:translateX(-50%) scale(1.1);opacity:1}}
+.splash-logo{font-family:var(--font-title);font-size:5rem;letter-spacing:0.08em;line-height:1;text-align:center}.splash-logo .r{color:var(--flame)}
+.gold-line{width:36px;height:1px;background:linear-gradient(to right,transparent,var(--gold),transparent);margin:1.4rem auto}
+.form-title{font-family:var(--font-display);font-size:1.9rem;font-weight:600;line-height:1.1;margin-bottom:0.3rem}
+.form-sub{font-family:var(--font-ui);font-size:0.88rem;font-weight:300;color:var(--text-dim);margin-bottom:1.8rem;line-height:1.6}
+.auth-input{width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:var(--font-display);font-size:1rem;padding:0.85rem 1rem;outline:none;transition:all 0.22s;margin-bottom:0.9rem;display:block;-webkit-appearance:none}
+.auth-input:focus{border-color:var(--flame);background:var(--lift)}.auth-input::placeholder{color:var(--text-muted);font-style:italic;font-size:0.92rem}
+.auth-select{width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:var(--font-ui);font-size:0.92rem;padding:0.85rem 1rem;outline:none;appearance:none;cursor:pointer;transition:all 0.22s;margin-bottom:0.9rem}
+.auth-select:focus{border-color:var(--flame)}.auth-select option{background:var(--deep)}
+.auth-sep{display:flex;align-items:center;gap:0.7rem;margin:1rem 0}
+.auth-sep-line{flex:1;height:1px;background:var(--border)}
+.auth-sep-txt{font-family:var(--font-ui);font-size:0.5rem;letter-spacing:0.2em;color:var(--text-muted);text-transform:uppercase}
+.social-btn{width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:var(--font-ui);font-size:0.72rem;letter-spacing:0.06em;padding:0.8rem;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:0.6rem;transition:all 0.2s;margin-bottom:0.5rem}
+.social-btn:hover{border-color:var(--border-hi);background:var(--lift)}
+.btn-main{width:100%;background:var(--flame);border:none;color:white;font-family:var(--font-ui);font-size:0.72rem;font-weight:600;letter-spacing:0.18em;text-transform:uppercase;padding:1rem;cursor:pointer;transition:all 0.2s;display:block}
+.btn-main:hover{background:var(--flame-deep)}.btn-main:disabled{opacity:0.4;cursor:not-allowed}
+.btn-outline{width:100%;background:transparent;border:1px solid rgba(240,232,216,0.18);color:var(--text-dim);font-family:var(--font-ui);font-size:0.72rem;font-weight:500;letter-spacing:0.18em;text-transform:uppercase;padding:1rem;cursor:pointer;transition:all 0.2s;display:block}
+.btn-outline:hover{border-color:var(--border-gold);color:var(--gold)}
+.auth-switch{text-align:center;margin-top:1.4rem;font-family:var(--font-ui);font-size:0.75rem;color:var(--text-muted)}
+.auth-link{color:var(--gold);font-size:0.65rem;font-weight:500;letter-spacing:0.08em;cursor:pointer}
+.terms-row{display:flex;align-items:flex-start;gap:0.75rem;margin-bottom:1rem}
+.terms-box{width:20px;height:20px;flex-shrink:0;margin-top:2px;background:var(--surface);border:1px solid var(--border);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s}
+.terms-box.checked{background:var(--flame);border-color:var(--flame)}.terms-box.checked::after{content:'✓';color:white;font-size:0.7rem}
+.terms-txt{font-family:var(--font-ui);font-size:0.75rem;color:var(--text-muted);line-height:1.6}.terms-txt a{color:var(--gold);text-decoration:none}
+.auth-hdr{display:flex;align-items:center;gap:0.75rem;padding:1.1rem 1rem;border-bottom:1px solid var(--border);background:rgba(6,6,10,0.9);backdrop-filter:blur(12px);flex-shrink:0}
+.back-btn{width:34px;height:34px;display:flex;align-items:center;justify-content:center;background:var(--surface);border:1px solid var(--border);color:var(--text-muted);cursor:pointer;font-size:1rem;transition:all 0.2s;flex-shrink:0}
+.back-btn:hover{border-color:var(--flame);color:var(--flame)}
+.step-lbl{font-family:var(--font-ui);font-size:0.5rem;letter-spacing:0.15em;color:var(--text-muted);margin-left:auto;text-transform:uppercase}
+.auth-form{flex:1;overflow-y:auto;padding:1.8rem 1.2rem 3rem;-webkit-overflow-scrolling:touch}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:0.6rem}
+.pw-bars{display:flex;gap:3px;margin:0.2rem 0 0.9rem}
+.pw-bar{flex:1;height:2px;background:var(--border);border-radius:1px;transition:background 0.3s}
+.pw-bar.weak{background:#E74C3C}.pw-bar.medium{background:#E67E22}.pw-bar.strong{background:#27AE60}
+.otp-row{display:flex;gap:0.6rem;justify-content:center;margin:1.5rem 0}
+.otp-input{width:46px;height:56px;background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:var(--font-title);font-size:1.9rem;text-align:center;outline:none;transition:all 0.2s;-webkit-appearance:none}
+.otp-input:focus{border-color:var(--flame)}
+/* ONBOARDING */
+.ob-progress{display:flex;gap:4px;padding:1rem 1.2rem 0;flex-shrink:0}
+.ob-seg{flex:1;height:2px;background:var(--border);border-radius:1px;transition:background 0.4s}
+.ob-seg.done{background:var(--flame)}.ob-seg.active{background:linear-gradient(to right,var(--flame),var(--gold))}
+.ob-content{flex:1;overflow-y:auto;padding:1.5rem 1.2rem;-webkit-overflow-scrolling:touch}
+.ob-step{display:none;flex-direction:column}.ob-step.active{display:flex;animation:fadeUp 0.45s var(--ease-out) forwards}
+.ob-emoji{font-size:2.8rem;margin-bottom:1rem}
+.ob-title{font-family:var(--font-display);font-size:2rem;font-weight:600;line-height:1.15;margin-bottom:0.75rem}
+.ob-title .ac{color:var(--flame);font-style:italic}
+.ob-body{font-family:var(--font-display);font-size:1rem;font-weight:300;font-style:italic;color:var(--text-dim);line-height:1.7;margin-bottom:1.5rem}
+.ob-stat{display:flex;align-items:center;gap:0.75rem;padding:0.85rem 1rem;background:var(--surface);border-left:2px solid var(--flame);margin-bottom:0.6rem}
+.ob-stat.gold{border-left-color:var(--gold)}
+.ob-stat-lbl{font-family:var(--font-ui);font-size:0.58rem;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:var(--gold);margin-bottom:2px}
+.ob-stat-lbl.m{color:var(--text-muted)}
+.ob-stat-val{font-family:var(--font-display);font-size:0.92rem;font-style:italic;color:var(--text-dim)}
+.time-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:0.4rem;margin-bottom:1rem}
+.time-opt{padding:0.65rem 0.4rem;border:1px solid var(--border);background:var(--surface);cursor:pointer;font-family:var(--font-ui);font-size:0.68rem;text-align:center;transition:all 0.2s;color:var(--text-dim)}
+.time-opt.active{border-color:var(--flame);background:var(--flame-glow);color:var(--text)}
+.ob-cats{display:flex;flex-wrap:wrap;gap:0.4rem;margin-bottom:1.2rem}
+.ob-cat{font-family:var(--font-ui);font-size:0.6rem;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;padding:0.38rem 0.75rem;border:1px solid var(--border);background:none;color:var(--text-muted);cursor:pointer;transition:all 0.2s}
+.ob-cat.active{background:var(--flame);border-color:var(--flame);color:white}
+.prayer-area{background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--flame);margin-bottom:0.9rem}
+.prayer-ta{width:100%;background:none;border:none;color:var(--text);font-family:var(--font-display);font-size:1rem;font-style:italic;padding:1rem;resize:none;min-height:110px;outline:none;line-height:1.7}
+.prayer-ta::placeholder{color:var(--text-muted)}
+.prayer-char{font-family:var(--font-ui);font-size:0.48rem;color:var(--text-muted);text-align:right;padding:0.3rem 0.75rem;border-top:1px solid var(--border)}
+.vis-opts{display:flex;gap:0.5rem;margin-bottom:1rem}
+.vis-opt{flex:1;display:flex;flex-direction:column;align-items:center;gap:0.3rem;padding:0.65rem 0.4rem;border:1px solid var(--border);background:none;cursor:pointer;transition:all 0.2s}
+.vis-opt .vi{font-size:1.1rem}.vis-opt .vl{font-family:var(--font-ui);font-size:0.48rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-muted)}
+.vis-opt.active{border-color:var(--flame);background:var(--flame-glow)}.vis-opt.active .vl{color:var(--flame)}
+.ob-bottom{flex-shrink:0;padding:0.75rem 1.2rem 1.5rem;display:flex;flex-direction:column;gap:0.6rem}
+.skip-btn{background:none;border:none;color:var(--text-muted);font-family:var(--font-ui);font-size:0.6rem;letter-spacing:0.15em;text-transform:uppercase;cursor:pointer;text-align:center;padding:0.3rem;transition:color 0.2s}
+/* FEED */
+.urgent-banner{flex-shrink:0;background:linear-gradient(135deg,var(--flame-deep),var(--flame));padding:0.5rem 1rem;display:flex;align-items:center;gap:0.6rem;cursor:pointer;overflow:hidden}
+.ub-icon{font-size:0.85rem;animation:shake 2s ease-in-out infinite}
+@keyframes shake{0%,100%{transform:rotate(0)}20%{transform:rotate(-8deg)}40%{transform:rotate(8deg)}60%{transform:rotate(-4deg)}80%{transform:rotate(4deg)}}
+.ub-txt{font-family:var(--font-ui);font-size:0.65rem;font-weight:500;letter-spacing:0.06em;color:white;flex:1}
+.ub-close{font-size:0.75rem;color:rgba(255,255,255,0.6);cursor:pointer;padding:0.2rem}
+.cat-bar{flex-shrink:0;display:flex;gap:0.4rem;padding:0.65rem 1rem;overflow-x:auto;scrollbar-width:none;border-bottom:1px solid var(--border);background:rgba(12,12,20,0.8);backdrop-filter:blur(10px)}
+.cat-bar::-webkit-scrollbar{display:none}
+.cat-pill{flex-shrink:0;font-family:var(--font-ui);font-size:0.6rem;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;padding:0.35rem 0.8rem;border:1px solid var(--border);background:none;color:var(--text-muted);cursor:pointer;transition:all 0.22s;white-space:nowrap}
+.cat-pill.active{background:var(--flame);border-color:var(--flame);color:white}
+.pub-area{flex-shrink:0;padding:0.7rem 1rem;background:var(--abyss);border-bottom:1px solid var(--border)}
+.pub-trigger{display:flex;align-items:center;gap:0.75rem;padding:0.75rem 1rem;background:var(--surface);border:1px solid var(--border);cursor:pointer;transition:all 0.22s}
+.pub-trigger:hover{border-color:var(--border-flame);background:var(--lift)}
+.pub-av{width:32px;height:32px;border-radius:50%;flex-shrink:0;background:linear-gradient(135deg,var(--flame-deep),var(--flame));display:flex;align-items:center;justify-content:center;font-family:var(--font-title);font-size:0.85rem;color:white}
+.pub-ph{font-family:var(--font-display);font-size:0.95rem;font-style:italic;color:var(--text-muted);flex:1}
+.pub-icons{display:flex;gap:0.5rem}
+.pub-icon-btn{width:28px;height:28px;display:flex;align-items:center;justify-content:center;border:1px solid var(--border);background:var(--deep);font-size:0.75rem;cursor:pointer;transition:all 0.2s;flex-shrink:0}
+.feed-divider{display:flex;align-items:center;gap:0.8rem;padding:0.55rem 1rem;background:var(--void);border-bottom:1px solid var(--border)}
+.fd-line{flex:1;height:1px;background:var(--border)}.fd-txt{font-family:var(--font-ui);font-size:0.5rem;letter-spacing:0.22em;color:var(--text-muted);text-transform:uppercase}.fd-x{color:var(--gold);font-size:0.7rem;opacity:0.6}
+/* Prayer Card */
+.prayer-card{border-bottom:1px solid var(--border);background:var(--abyss);transition:background 0.2s;position:relative;overflow:hidden}
+.prayer-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:0;transition:width 0.3s;pointer-events:none}
+.prayer-card:hover{background:var(--deep)}.prayer-card:hover::before{width:2px;background:var(--border-hi)}
+.prayer-card.urgent::before{width:3px;background:var(--flame)}.prayer-card.answered::before{width:3px;background:var(--gold)}.prayer-card.answered{background:rgba(201,168,76,0.03)}
+.card-inner{padding:1.1rem 1rem 0}
+.card-hdr{display:flex;align-items:flex-start;gap:0.75rem;margin-bottom:0.8rem}
+.uav{width:38px;height:38px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-family:var(--font-title);font-size:1rem;color:white;border:1.5px solid rgba(255,255,255,0.08);position:relative}
+.av-on{position:absolute;bottom:0;right:0;width:9px;height:9px;border-radius:50%;background:var(--green);border:1.5px solid var(--abyss)}
+.uname{font-family:var(--font-ui);font-size:0.72rem;font-weight:500;letter-spacing:0.04em;margin-bottom:0.18rem}
+.umeta{display:flex;align-items:center;gap:0.45rem;flex-wrap:wrap}
+.uflag{font-size:0.8rem}.uloc,.utime{font-family:var(--font-ui);font-size:0.55rem;color:var(--text-muted)}.utime::before{content:'·';margin-right:0.28rem}
+.sbadge{display:inline-flex;align-items:center;gap:0.28rem;font-family:var(--font-ui);font-size:0.5rem;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;padding:0.2rem 0.5rem;border:1px solid;flex-shrink:0}
+.sdot{width:5px;height:5px;border-radius:50%;background:currentColor;animation:sdot 2s infinite}
+@keyframes sdot{0%,100%{opacity:1}50%{opacity:0.3}}
+.sb-u{color:var(--flame);border-color:var(--border-flame)}.sb-o{color:var(--blue);border-color:rgba(91,155,213,0.3)}.sb-a{color:var(--gold);border-color:var(--border-gold)}
+.upd-tag{display:flex;align-items:flex-start;gap:0.5rem;background:rgba(201,168,76,0.06);border:1px solid var(--border-gold);border-left:2px solid var(--gold);padding:0.55rem 0.75rem;margin-bottom:0.8rem}
+.upd-txt{font-family:var(--font-display);font-size:0.9rem;font-style:italic;color:rgba(201,168,76,0.85);line-height:1.5}
+.celeb-wrap{background:linear-gradient(135deg,rgba(201,168,76,0.12),rgba(201,168,76,0.04));border:1px solid var(--border-gold);padding:0.7rem 1rem;margin-bottom:0.8rem;display:flex;align-items:center;gap:0.6rem;animation:celebIn 0.6s var(--ease-spring)}
+@keyframes celebIn{from{transform:scale(0.95);opacity:0}to{transform:scale(1);opacity:1}}
+.celeb-txt{font-family:var(--font-display);font-style:italic;font-size:0.9rem;color:var(--gold);line-height:1.4}
+.celeb-cnt{font-family:var(--font-ui);font-size:0.55rem;letter-spacing:0.1em;color:var(--text-muted);text-transform:uppercase;margin-top:2px}
+.vocal-tag{display:inline-flex;align-items:center;gap:0.35rem;background:rgba(91,155,213,0.08);border:1px solid rgba(91,155,213,0.2);padding:0.28rem 0.6rem;margin-bottom:0.7rem;font-family:var(--font-ui);font-size:0.55rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--blue)}
+.vbars{display:flex;align-items:center;gap:2px}
+.vbar{width:2px;background:var(--blue);border-radius:1px;animation:vbA 1s ease-in-out infinite}
+.vbar:nth-child(1){height:8px}.vbar:nth-child(2){height:12px;animation-delay:0.15s}.vbar:nth-child(3){height:6px;animation-delay:0.3s}.vbar:nth-child(4){height:10px;animation-delay:0.1s}
+@keyframes vbA{0%,100%{transform:scaleY(1);opacity:0.6}50%{transform:scaleY(0.4);opacity:1}}
+.card-title{font-family:var(--font-display);font-size:1.25rem;font-weight:600;line-height:1.2;margin-bottom:0.5rem}
+.card-body{font-family:var(--font-display);font-size:0.98rem;font-weight:300;line-height:1.7;color:var(--text-dim);margin-bottom:0.85rem}
+.card-body.cl{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.rm-btn{background:none;border:none;cursor:pointer;font-family:var(--font-ui);font-size:0.58rem;font-weight:500;letter-spacing:0.12em;color:var(--gold);text-transform:uppercase;padding:0 0 0.75rem;display:block}
+.pctr{display:flex;align-items:center;gap:0.55rem;padding:0.6rem 0;border-top:1px solid var(--border)}
+.av-stack{display:flex}
+.sav{width:22px;height:22px;border-radius:50%;border:1.5px solid var(--abyss);margin-left:-6px;display:flex;align-items:center;justify-content:center;font-family:var(--font-title);font-size:0.6rem;color:white}
+.sav:first-child{margin-left:0}
+.ctxt{font-family:var(--font-display);font-size:0.9rem;font-style:italic;color:var(--text-muted);flex:1}
+.ctxt strong{color:var(--text-dim);font-style:normal;font-weight:600}
+.card-acts{display:flex;align-items:center;border-top:1px solid var(--border)}
+.act-btn{flex:1;display:flex;align-items:center;justify-content:center;gap:0.35rem;background:none;border:none;cursor:pointer;padding:0.7rem 0.3rem;transition:all 0.2s;color:var(--text-muted);position:relative}
+.act-btn:hover{background:rgba(255,255,255,0.03);color:var(--text-dim)}.act-btn:active{transform:scale(0.95)}
+.ai{font-size:0.95rem;line-height:1}.ac{font-family:var(--font-ui);font-size:0.6rem;font-weight:500}.al{font-family:var(--font-ui);font-size:0.5rem;letter-spacing:0.1em;text-transform:uppercase}
+.act-sep{width:1px;height:20px;background:var(--border);flex-shrink:0}
+.act-pray.praying{color:var(--flame)}.act-pray.praying .ac{color:var(--flame)}
+/* PTR */
+.ptr-bar{display:flex;align-items:center;justify-content:center;gap:0.5rem;height:0;overflow:hidden;transition:height 0.3s;background:var(--deep);flex-shrink:0}
+.ptr-bar.on{height:44px}
+.ptr-spin{width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--flame);border-radius:50%;animation:spin 0.7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.ptr-txt{font-family:var(--font-ui);font-size:0.6rem;letter-spacing:0.1em;color:var(--text-muted)}
+/* MODAL */
+.modal-ov{position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:500;display:flex;align-items:flex-end;animation:mfade 0.25s ease}
+@keyframes mfade{from{opacity:0}to{opacity:1}}
+.modal{background:var(--deep);border-top:1px solid var(--border-hi);width:100%;max-width:480px;margin:0 auto;padding:0 0 2.5rem;max-height:92vh;overflow-y:auto;animation:mslide 0.35s cubic-bezier(0.4,0,0.2,1)}
+@keyframes mslide{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.modal-handle{width:40px;height:4px;background:var(--lift2);border-radius:2px;margin:1rem auto 1.4rem}
+.modal-head{padding:0 1rem 1rem;border-bottom:1px solid var(--border);margin-bottom:1.2rem}
+.modal-title{font-family:var(--font-display);font-size:1.7rem;font-weight:600;line-height:1}
+.modal-sub{font-family:var(--font-ui);font-size:0.7rem;color:var(--text-muted);margin-top:0.3rem}
+.modal-body{padding:0 1rem}
+.m-lbl{font-family:var(--font-ui);font-size:0.55rem;font-weight:500;letter-spacing:0.2em;color:var(--gold);text-transform:uppercase;margin-bottom:0.4rem;display:block}
+.m-inp{width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:var(--font-display);font-size:1.05rem;padding:0.85rem 1rem;outline:none;transition:all 0.22s}
+.m-inp:focus{border-color:var(--flame);background:var(--lift)}.m-inp::placeholder{color:var(--text-muted);font-style:italic;font-size:0.98rem}
+.m-ta{width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:var(--font-display);font-size:0.98rem;font-style:italic;padding:0.85rem 1rem;outline:none;resize:none;min-height:90px;line-height:1.7;transition:border-color 0.22s}
+.m-ta:focus{border-color:var(--flame)}.m-ta::placeholder{color:var(--text-muted)}
+.char-hint{font-family:var(--font-ui);font-size:0.48rem;color:var(--text-muted);text-align:right;margin-top:0.2rem;margin-bottom:0.9rem}
+.m-field{margin-bottom:1.1rem}
+.m-cats{display:flex;flex-wrap:wrap;gap:0.4rem}
+.m-cat{font-family:var(--font-ui);font-size:0.58rem;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;padding:0.32rem 0.7rem;border:1px solid var(--border);background:none;color:var(--text-muted);cursor:pointer;transition:all 0.2s}
+.m-cat.active{background:var(--flame);border-color:var(--flame);color:white}
+.m-opts{display:flex;gap:0.5rem}
+.m-opt{flex:1;display:flex;flex-direction:column;align-items:center;gap:0.3rem;padding:0.65rem 0.4rem;border:1px solid var(--border);background:none;cursor:pointer;transition:all 0.2s}
+.m-opt .oi{font-size:1.1rem}.m-opt .ol{font-family:var(--font-ui);font-size:0.48rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-muted)}
+.m-opt.active{border-color:var(--flame);background:var(--flame-glow)}.m-opt.active .ol{color:var(--flame)}
+.anon-tog{display:flex;align-items:center;gap:0.75rem;padding:0.75rem 1rem;background:var(--surface);border:1px solid var(--border);margin-bottom:1.1rem;cursor:pointer;transition:all 0.2s}
+.anon-tog.on{border-color:var(--border-gold);background:var(--gold-glow)}
+.tog-track{width:36px;height:20px;background:var(--lift2);border-radius:10px;position:relative;transition:background 0.2s;flex-shrink:0}
+.anon-tog.on .tog-track{background:var(--gold)}
+.tog-thumb{position:absolute;top:3px;left:3px;width:14px;height:14px;border-radius:50%;background:white;transition:transform 0.2s var(--ease-spring)}
+.anon-tog.on .tog-thumb{transform:translateX(16px)}
+.tog-info{flex:1}.tog-title{font-family:var(--font-ui);font-size:0.68rem;font-weight:500;color:var(--text);margin-bottom:1px}
+.tog-sub{font-family:var(--font-ui);font-size:0.58rem;color:var(--text-muted)}
+.m-submit{width:100%;background:var(--flame);border:none;color:white;font-family:var(--font-ui);font-size:0.72rem;font-weight:600;letter-spacing:0.18em;text-transform:uppercase;padding:1rem;cursor:pointer;transition:all 0.25s;margin-top:0.5rem}
+.m-submit:hover{background:var(--flame-deep)}.m-submit:disabled{opacity:0.35;cursor:not-allowed}
+/* EXPLORER */
+.search-bar{flex-shrink:0;padding:0.75rem 1rem;background:var(--abyss);border-bottom:1px solid var(--border)}
+.sw{display:flex;align-items:center;gap:0.7rem;background:var(--surface);border:1px solid var(--border);padding:0.7rem 1rem;transition:border-color 0.2s}
+.sw:focus-within{border-color:var(--flame)}
+.si{font-size:0.9rem;color:var(--text-muted);flex-shrink:0}
+.s-inp{background:none;border:none;color:var(--text);font-family:var(--font-ui);font-size:0.88rem;outline:none;flex:1}.s-inp::placeholder{color:var(--text-muted)}
+.s-clr{font-size:0.75rem;color:var(--text-muted);cursor:pointer;padding:0.2rem;display:none}.s-clr.on{display:block}
+.globe-hero{position:relative;background:var(--abyss);border-bottom:1px solid var(--border);padding:1.5rem 1rem 1.2rem;overflow:hidden}
+.globe-bg{position:absolute;inset:0;background:radial-gradient(ellipse 80% 60% at 50% 30%,rgba(200,16,46,0.12),transparent 70%);pointer-events:none}
+.globe-title{font-family:var(--font-display);font-size:2rem;font-weight:700;line-height:1.1;margin-bottom:0.3rem;position:relative;z-index:1}
+.globe-title .ac{color:var(--flame);font-style:italic}
+.globe-sub{font-family:var(--font-ui);font-size:0.72rem;color:var(--text-muted);margin-bottom:1.2rem;position:relative;z-index:1}
+.globe-stats{display:flex;gap:1.2rem;position:relative;z-index:1}
+.gstat{display:flex;flex-direction:column;gap:0.15rem}
+.gstat-n{font-family:var(--font-title);font-size:1.6rem;letter-spacing:0.06em;line-height:1}.gstat-n.red{color:var(--flame)}.gstat-n.gold{color:var(--gold)}
+.gstat-l{font-family:var(--font-ui);font-size:0.5rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--text-muted)}
+.cg{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border);margin-bottom:1px}
+.cc{background:var(--abyss);padding:1rem 0.5rem;text-align:center;cursor:pointer;transition:background 0.2s;overflow:hidden}
+.cc:hover{background:var(--deep)}
+.cc-f{font-size:1.9rem;margin-bottom:0.35rem;display:block;transition:transform 0.2s}.cc:hover .cc-f{transform:scale(1.1)}
+.cc-n{font-family:var(--font-title);font-size:0.85rem;letter-spacing:0.06em;display:block;margin-bottom:0.15rem}
+.cc-c{font-family:var(--font-ui);font-size:0.5rem;letter-spacing:0.1em;color:var(--text-muted)}
+.cc-bar{height:2px;background:var(--border);margin-top:0.4rem;overflow:hidden}
+.cc-fill{height:100%;background:linear-gradient(to right,var(--flame),var(--gold));transition:width 1.2s var(--ease-out)}
+.imp-strip{display:grid;grid-template-columns:repeat(2,1fr);gap:1px;background:var(--border);margin-bottom:1px}
+.ic{background:var(--abyss);padding:1rem;cursor:pointer;transition:background 0.2s;display:flex;flex-direction:column;gap:0.4rem}
+.ic:hover{background:var(--deep)}.ic-icon{font-size:1.4rem}
+.ic-n{font-family:var(--font-title);font-size:1.5rem;letter-spacing:0.06em;line-height:1}.ic-n.red{color:var(--flame)}.ic-n.gold{color:var(--gold)}
+.ic-l{font-family:var(--font-ui);font-size:0.55rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-muted);line-height:1.3}
+.int-row{display:flex;gap:0.6rem;padding:0.3rem 1rem 0.8rem;overflow-x:auto;scrollbar-width:none}
+.int-row::-webkit-scrollbar{display:none}
+.int-item{display:flex;flex-direction:column;align-items:center;gap:0.35rem;flex-shrink:0;cursor:pointer;transition:transform 0.2s}
+.int-item:hover{transform:translateY(-2px)}
+.int-av-w{position:relative}
+.int-av{width:52px;height:52px;border-radius:50%;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-family:var(--font-title);font-size:1.1rem;color:white}
+.int-av.gb{border-color:var(--gold)}
+.int-on{position:absolute;bottom:1px;right:1px;width:12px;height:12px;border-radius:50%;background:var(--green);border:2px solid var(--void)}
+.int-nm{font-family:var(--font-ui);font-size:0.55rem;font-weight:500;color:var(--text-dim);max-width:60px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.int-ct{font-family:var(--font-ui);font-size:0.48rem;color:var(--text-muted)}
+.tr-card{border-bottom:1px solid var(--border);padding:1rem;background:var(--abyss);transition:background 0.2s;cursor:pointer;display:flex;gap:0.9rem;align-items:flex-start}
+.tr-card:hover{background:var(--deep)}
+.tr-rk{font-family:var(--font-title);font-size:2rem;letter-spacing:0.04em;color:var(--border-hi);line-height:1;flex-shrink:0;width:28px;text-align:right}
+.tr-rk.top{color:var(--gold)}.tr-info{flex:1;min-width:0}
+.tr-cat{font-family:var(--font-ui);font-size:0.52rem;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:var(--gold);margin-bottom:0.25rem}
+.tr-ttl{font-family:var(--font-display);font-size:1.05rem;font-weight:600;line-height:1.3;margin-bottom:0.35rem}
+.tr-meta{display:flex;align-items:center;gap:0.6rem;flex-wrap:wrap}
+.tr-cnt{font-family:var(--font-ui);font-size:0.58rem;color:var(--text-muted)}.tr-arr{font-size:0.65rem;color:var(--green)}
+.chal-card{margin:0 1rem 0.8rem;background:var(--surface);border:1px solid var(--border);position:relative;overflow:hidden;cursor:pointer;transition:all 0.2s}
+.chal-card:hover{border-color:var(--border-flame);transform:translateY(-1px)}
+.chal-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(to right,var(--flame),var(--gold))}
+.ch-inner{padding:1.1rem 1rem}
+.ch-badge{display:inline-flex;align-items:center;gap:0.35rem;background:var(--flame-glow);border:1px solid var(--border-flame);padding:0.22rem 0.55rem;margin-bottom:0.7rem;font-family:var(--font-ui);font-size:0.52rem;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;color:var(--flame)}
+.ch-ttl{font-family:var(--font-display);font-size:1.2rem;font-weight:600;line-height:1.2;margin-bottom:0.35rem}
+.ch-desc{font-family:var(--font-display);font-size:0.88rem;font-style:italic;color:var(--text-dim);line-height:1.5;margin-bottom:0.9rem}
+.ch-ph{display:flex;align-items:center;justify-content:space-between;margin-bottom:0.4rem}
+.ch-pl{font-family:var(--font-ui);font-size:0.55rem;letter-spacing:0.1em;color:var(--text-muted);text-transform:uppercase}
+.ch-pv{font-family:var(--font-title);font-size:1rem;letter-spacing:0.06em;color:var(--gold)}
+.ch-track{height:4px;background:var(--lift2);overflow:hidden}
+.ch-fill{height:100%;background:linear-gradient(to right,var(--flame-deep),var(--flame),var(--gold));transition:width 1.5s var(--ease-out)}
+.ch-foot{display:flex;align-items:center;justify-content:space-between;margin-top:0.8rem}
+.ch-days{font-family:var(--font-ui);font-size:0.6rem;color:var(--text-muted)}
+.ch-join{background:var(--flame);border:none;color:white;font-family:var(--font-ui);font-size:0.6rem;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;padding:0.5rem 1rem;cursor:pointer;transition:all 0.2s}
+.ch-join:hover{background:var(--flame-deep)}.ch-join.joined{background:transparent;border:1px solid var(--border-gold);color:var(--gold)}
+.te-card{border-bottom:1px solid var(--border);padding:1.1rem 1rem;background:var(--abyss);transition:background 0.2s}
+.te-card:hover{background:var(--deep)}
+.te-hdr{display:flex;align-items:flex-start;gap:0.75rem;margin-bottom:0.7rem}
+.te-av{width:38px;height:38px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-family:var(--font-title);font-size:1rem;color:white;border:1.5px solid rgba(255,255,255,0.08)}
+.te-nm{font-family:var(--font-ui);font-size:0.72rem;font-weight:500;margin-bottom:0.15rem}
+.te-mt{display:flex;align-items:center;gap:0.4rem}
+.te-badge{display:inline-flex;align-items:center;gap:0.28rem;font-family:var(--font-ui);font-size:0.5rem;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;padding:0.18rem 0.45rem;border:1px solid var(--border-gold);color:var(--gold);margin-left:auto}
+.te-ttl{font-family:var(--font-display);font-size:1.05rem;font-weight:600;line-height:1.25;margin-bottom:0.45rem}
+.te-body{font-family:var(--font-display);font-size:0.92rem;font-weight:300;font-style:italic;line-height:1.65;color:var(--text-dim);margin-bottom:0.75rem;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.te-reacts{display:flex;gap:0.6rem}
+.te-r{background:none;border:none;color:var(--text-muted);cursor:pointer;display:flex;align-items:center;gap:0.28rem;font-size:0.88rem;padding:0;transition:color 0.2s;font-family:var(--font-ui);font-size:0.58rem}
+.te-r:hover{color:var(--gold)}
+/* GROUPES */
+.plan-banner{flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:0.6rem 1rem;background:rgba(201,168,76,0.05);border-bottom:1px solid var(--border-gold)}
+.plan-txt{font-family:var(--font-ui);font-size:0.6rem;letter-spacing:0.06em;color:rgba(201,168,76,0.8)}.plan-txt strong{color:var(--gold)}
+.plan-up{background:none;border:1px solid var(--border-gold);color:var(--gold);font-family:var(--font-ui);font-size:0.52rem;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;padding:0.3rem 0.7rem;cursor:pointer;transition:all 0.2s}
+.create-btn{background:var(--flame);border:none;color:white;font-family:var(--font-ui);font-size:0.6rem;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;padding:0.45rem 0.9rem;cursor:pointer;transition:all 0.2s}
+.gc{border-bottom:1px solid var(--border);padding:1rem;background:var(--abyss);transition:background 0.2s;cursor:pointer;position:relative;overflow:hidden}
+.gc:hover{background:var(--deep)}.gc::before{content:'';position:absolute;left:0;top:0;bottom:0;width:0;transition:width 0.3s var(--ease-out)}
+.gc:hover::before{width:2px;background:var(--border-hi)}.gc.joined::before{width:3px;background:var(--green)}.gc.adm::before{width:3px;background:var(--gold)}
+.gc-hdr{display:flex;align-items:flex-start;gap:0.85rem;margin-bottom:0.65rem}
+.gc-emoji{width:46px;height:46px;border-radius:6px;background:var(--surface);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:1.5rem;flex-shrink:0;transition:transform 0.2s}
+.gc:hover .gc-emoji{transform:scale(1.05)}
+.gc-nm{font-family:var(--font-display);font-size:1.1rem;font-weight:600;line-height:1.2;margin-bottom:0.25rem}
+.gc-meta{display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap}
+.gc-type{font-family:var(--font-ui);font-size:0.5rem;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;padding:0.15rem 0.42rem;border:1px solid}
+.gt-prayer{color:var(--blue);border-color:rgba(91,155,213,0.3)}.gt-mission{color:var(--green);border-color:rgba(46,204,113,0.3)}.gt-family{color:#E67E22;border-color:rgba(230,126,34,0.3)}.gt-church{color:var(--gold);border-color:var(--border-gold)}.gt-youth{color:#9B59B6;border-color:rgba(155,89,182,0.3)}.gt-intercess{color:var(--flame);border-color:var(--border-flame)}
+.gc-mbrs{font-family:var(--font-ui);font-size:0.55rem;color:var(--text-muted)}
+.gc-badge{font-family:var(--font-ui);font-size:0.47rem;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;padding:0.15rem 0.4rem;border:1px solid}
+.gc-badge.adm{color:var(--gold);border-color:var(--border-gold)}.gc-badge.mem{color:var(--green);border-color:rgba(46,204,113,0.3)}
+.gc-desc{font-family:var(--font-display);font-size:0.9rem;font-style:italic;font-weight:300;color:var(--text-dim);line-height:1.5;margin-bottom:0.75rem;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.gc-foot{display:flex;align-items:center;gap:0.7rem}
+.gc-stat{font-family:var(--font-ui);font-size:0.55rem;color:var(--text-muted);display:flex;align-items:center;gap:0.3rem}
+.gc-avs{display:flex}
+.gc-av{width:20px;height:20px;border-radius:50%;border:1.5px solid var(--abyss);margin-left:-5px;display:flex;align-items:center;justify-content:center;font-family:var(--font-title);font-size:0.55rem;color:white}
+.gc-av:first-child{margin-left:0}
+.btn-open{background:none;border:1px solid var(--border-hi);color:var(--text-dim);font-family:var(--font-ui);font-size:0.58rem;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;padding:0.4rem 0.85rem;cursor:pointer;transition:all 0.2s}
+.btn-open:hover{border-color:var(--border-gold);color:var(--gold)}
+.btn-join{background:var(--flame);border:none;color:white;font-family:var(--font-ui);font-size:0.58rem;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;padding:0.4rem 0.85rem;cursor:pointer;transition:all 0.2s}
+.create-banner{margin:0.8rem 1rem;border:1px dashed var(--border-flame);padding:1.3rem 1rem;text-align:center;cursor:pointer;transition:all 0.25s;background:rgba(200,16,46,0.03)}
+.create-banner:hover{border-color:var(--flame);background:var(--flame-glow);transform:translateY(-1px)}
+.cb-icon{font-size:1.6rem;margin-bottom:0.5rem;opacity:0.7}.cb-ttl{font-family:var(--font-display);font-size:1.1rem;font-weight:600;margin-bottom:0.25rem}.cb-desc{font-family:var(--font-display);font-size:0.85rem;font-style:italic;color:var(--text-muted);line-height:1.5}
+.inv-card{border-bottom:1px solid var(--border);padding:1rem;background:rgba(200,16,46,0.03);border-left:3px solid var(--flame)}
+.inv-from{font-family:var(--font-ui);font-size:0.58rem;color:var(--text-muted);margin-bottom:0.5rem}.inv-from span{color:var(--gold)}
+.inv-acts{display:flex;gap:0.5rem;margin-top:0.75rem}
+.btn-acc{flex:1;background:var(--green);border:none;color:white;font-family:var(--font-ui);font-size:0.6rem;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;padding:0.55rem;cursor:pointer}
+.btn-dec{flex:1;background:none;border:1px solid var(--border);color:var(--text-muted);font-family:var(--font-ui);font-size:0.6rem;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;padding:0.55rem;cursor:pointer;transition:all 0.2s}
+.btn-dec:hover{border-color:var(--flame);color:var(--flame)}
+/* GRPE MODAL */
+.emoji-grid{display:flex;gap:0.4rem;flex-wrap:wrap;margin-bottom:1.1rem}
+.emoji-opt{width:42px;height:42px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;border:1px solid var(--border);background:var(--surface);cursor:pointer;transition:all 0.2s;border-radius:4px}
+.emoji-opt:hover{border-color:var(--border-flame);transform:scale(1.1)}.emoji-opt.sel{border-color:var(--gold);background:var(--gold-glow)}
+.type-opts{display:flex;flex-wrap:wrap;gap:0.4rem;margin-bottom:1.1rem}
+.type-opt{font-family:var(--font-ui);font-size:0.58rem;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;padding:0.35rem 0.7rem;border:1px solid var(--border);background:none;color:var(--text-muted);cursor:pointer;transition:all 0.2s}
+.type-opt.active{background:var(--flame);border-color:var(--flame);color:white}
+.priv-opts{display:flex;gap:0.5rem;margin-bottom:1.1rem}
+.priv-opt{flex:1;display:flex;flex-direction:column;align-items:center;gap:0.3rem;padding:0.65rem 0.4rem;border:1px solid var(--border);background:none;cursor:pointer;transition:all 0.2s}
+.priv-opt .pi{font-size:1.1rem}.priv-opt .pl{font-family:var(--font-ui);font-size:0.48rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-muted)}
+.priv-opt.active{border-color:var(--flame);background:var(--flame-glow)}.priv-opt.active .pl{color:var(--flame)}
+.plan-info{background:var(--surface);border:1px solid var(--border-gold);padding:0.85rem 1rem;margin-bottom:1.1rem}
+.plan-info-ttl{font-family:var(--font-ui);font-size:0.58rem;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--gold);margin-bottom:0.5rem}
+.plan-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:0.3rem}
+.plan-tier{font-family:var(--font-ui);font-size:0.6rem;color:var(--text-dim)}.plan-price{font-family:var(--font-ui);font-size:0.6rem;color:var(--text-muted)}
+/* PROFIL */
+.cover-band{height:120px;position:relative;overflow:hidden;flex-shrink:0;background:linear-gradient(135deg,#06060A,#1A0508 40%,#2A0810 70%,#06060A)}
+.cover-band::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 70% 80% at 60% 50%,rgba(200,16,46,0.2),transparent 70%)}
+.cover-band::after{content:'✝';position:absolute;right:1.5rem;top:50%;transform:translateY(-50%);font-size:5rem;color:rgba(240,235,224,0.04);pointer-events:none}
+.cover-edit-btn{position:absolute;bottom:0.5rem;right:0.7rem;background:rgba(0,0,0,0.5);border:1px solid var(--border-hi);color:var(--text-muted);font-family:var(--font-ui);font-size:0.52rem;letter-spacing:0.1em;padding:0.25rem 0.6rem;cursor:pointer;transition:all 0.2s}
+.pav-wrap{position:relative;margin-top:-38px;margin-bottom:0.8rem;display:inline-block}
+.pav{width:76px;height:76px;border-radius:50%;background:linear-gradient(135deg,var(--flame-deep),var(--flame));border:3px solid var(--abyss);display:flex;align-items:center;justify-content:center;font-family:var(--font-title);font-size:2rem;color:white}
+.pav-v{position:absolute;bottom:2px;right:2px;width:22px;height:22px;background:var(--gold);border-radius:50%;border:2px solid var(--abyss);display:flex;align-items:center;justify-content:center;font-size:0.65rem}
+.pav-e{position:absolute;bottom:2px;left:2px;width:22px;height:22px;background:var(--surface);border-radius:50%;border:2px solid var(--abyss);display:flex;align-items:center;justify-content:center;font-size:0.6rem;cursor:pointer}
+.pro-hdr{padding:0 1rem 1.2rem;background:var(--abyss);border-bottom:1px solid var(--border)}
+.pname{font-family:var(--font-display);font-size:1.8rem;font-weight:700;line-height:1;margin-bottom:0.25rem}
+.phandle{font-family:var(--font-ui);font-size:0.6rem;letter-spacing:0.08em;color:var(--text-muted);margin-bottom:0.6rem}
+.pbio{font-family:var(--font-display);font-size:0.98rem;font-style:italic;font-weight:300;color:var(--text-dim);line-height:1.55;margin-bottom:0.8rem;max-width:340px}
+.pmeta{display:flex;flex-wrap:wrap;gap:0.6rem;margin-bottom:1rem}
+.pmi{display:flex;align-items:center;gap:0.3rem;font-family:var(--font-ui);font-size:0.58rem;color:var(--text-muted)}
+.p-acts{display:flex;gap:0.6rem}
+.btn-edit-p{flex:1;background:var(--surface);border:1px solid var(--border-hi);color:var(--text);font-family:var(--font-ui);font-size:0.6rem;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;padding:0.6rem;cursor:pointer;transition:all 0.2s}
+.btn-edit-p:hover{border-color:var(--border-gold);color:var(--gold)}
+.btn-share-p{width:38px;height:38px;background:var(--surface);border:1px solid var(--border);color:var(--text-muted);display:flex;align-items:center;justify-content:center;font-size:0.9rem;cursor:pointer;transition:all 0.2s;flex-shrink:0}
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border);flex-shrink:0}
+.stat-box{background:var(--abyss);padding:0.9rem 0.4rem;text-align:center}
+.stat-n{font-family:var(--font-title);font-size:1.75rem;letter-spacing:0.04em;display:block;line-height:1}
+.stat-n.red{color:var(--flame)}.stat-n.gold{color:var(--gold)}
+.stat-l{font-family:var(--font-ui);font-size:0.44rem;letter-spacing:0.1em;color:var(--text-muted);text-transform:uppercase;display:block;margin-top:0.22rem;line-height:1.3}
+.imp-sect{padding:0.9rem 1rem;background:var(--abyss);border-bottom:1px solid var(--border)}
+.imp-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:0.55rem}
+.imp-lbl{font-family:var(--font-ui);font-size:0.52rem;font-weight:500;letter-spacing:0.18em;text-transform:uppercase;color:var(--gold)}
+.imp-lvl{font-family:var(--font-ui);font-size:0.52rem;letter-spacing:0.1em;color:var(--text-muted)}.imp-lvl span{color:var(--text-dim)}
+.prog-track{height:3px;background:var(--lift2);overflow:hidden;margin-bottom:0.75rem}
+.prog-fill{height:100%;background:linear-gradient(to right,var(--flame-deep),var(--flame),var(--gold));width:0%;transition:width 1.6s var(--ease-out)}
+.badges-row{display:flex;gap:0.45rem;flex-wrap:wrap}
+.badge-pill{display:flex;align-items:center;gap:0.3rem;font-family:var(--font-ui);font-size:0.48rem;font-weight:500;letter-spacing:0.08em;padding:0.25rem 0.6rem;border:1px solid var(--border);color:var(--text-muted)}
+.badge-pill.earned{border-color:var(--border-gold);color:var(--gold);background:var(--gold-glow)}
+.don-strip{display:flex;align-items:center;gap:0.7rem;background:rgba(201,168,76,0.04);border-bottom:1px solid var(--border-gold);border-top:1px solid var(--border-gold);padding:0.65rem 1rem;cursor:pointer;transition:all 0.2s;flex-shrink:0}
+.don-strip:hover{background:var(--gold-glow)}.don-icon{font-size:1rem;flex-shrink:0}
+.don-info{flex:1;min-width:0}
+.don-ttl{font-family:var(--font-ui);font-size:0.65rem;font-weight:600;color:var(--gold);margin-bottom:0.1rem}
+.don-sb{font-family:var(--font-ui);font-size:0.55rem;color:var(--text-muted);line-height:1.4}
+.don-cta-b{background:none;border:1px solid var(--border-gold);color:var(--gold);font-family:var(--font-ui);font-size:0.55rem;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;padding:0.35rem 0.75rem;cursor:pointer;transition:all 0.2s;flex-shrink:0;white-space:nowrap}
+.don-cta-b:hover{background:var(--gold);color:var(--void)}
+.mc{border-bottom:1px solid var(--border);padding:1rem;background:var(--abyss);cursor:pointer}
+.mc:hover{background:var(--deep)}.mc.ans{border-left:3px solid var(--gold)}.mc.urg{border-left:3px solid var(--flame)}
+.mc-hdr{display:flex;align-items:flex-start;justify-content:space-between;gap:0.7rem;margin-bottom:0.35rem}
+.mc-ttl{font-family:var(--font-display);font-size:1.05rem;font-weight:600;line-height:1.25}
+.mc-b{font-family:var(--font-ui);font-size:0.48rem;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;padding:0.18rem 0.42rem;border:1px solid;flex-shrink:0;display:inline-flex;align-items:center;gap:0.25rem}
+.mc-b.a{color:var(--gold);border-color:var(--border-gold)}.mc-b.o{color:var(--blue);border-color:rgba(91,155,213,0.3)}.mc-b.u{color:var(--flame);border-color:var(--border-flame)}
+.mc-dot{width:4px;height:4px;border-radius:50%;background:currentColor;animation:sdot 2s infinite}
+.mc-body{font-family:var(--font-display);font-size:0.88rem;font-style:italic;font-weight:300;color:var(--text-dim);line-height:1.5;margin-bottom:0.6rem;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.mc-foot{display:flex;align-items:center;gap:0.7rem}
+.mc-stat{font-family:var(--font-ui);font-size:0.52rem;color:var(--text-muted)}.mc-date{font-family:var(--font-ui);font-size:0.5rem;color:var(--text-muted);margin-left:auto}
+.pro-tc{border-bottom:1px solid var(--border);padding:1.1rem 1rem;background:var(--abyss)}
+.pro-tc:hover{background:var(--deep)}
+.tc-hdr{display:flex;align-items:center;gap:0.5rem;margin-bottom:0.6rem}
+.tc-icon{font-size:1.2rem}.tc-lbl{font-family:var(--font-ui);font-size:0.52rem;font-weight:500;letter-spacing:0.15em;text-transform:uppercase;color:var(--gold)}.tc-date{font-family:var(--font-ui);font-size:0.48rem;color:var(--text-muted);margin-left:auto}
+.tc-ref{font-family:var(--font-display);font-size:0.88rem;font-weight:300;color:rgba(240,235,224,0.35);margin-bottom:0.35rem}
+.tc-text{font-family:var(--font-display);font-size:0.95rem;font-style:italic;font-weight:300;color:var(--text-dim);line-height:1.65;margin-bottom:0.75rem}
+.tc-reacts{display:flex;gap:0.6rem}
+.tc-r{background:none;border:none;color:var(--text-muted);cursor:pointer;display:flex;align-items:center;gap:0.28rem;font-size:0.88rem;padding:0;transition:color 0.2s;font-family:var(--font-ui);font-size:0.58rem}
+.tc-r:hover{color:var(--gold)}.tc-r.on{color:var(--gold)}
+.tl-wrap{padding:1rem}.tl-sec{font-family:var(--font-ui);font-size:0.52rem;font-weight:500;letter-spacing:0.2em;text-transform:uppercase;color:var(--gold);margin-bottom:1rem}
+.timeline{position:relative;padding-left:1.4rem}.timeline::before{content:'';position:absolute;left:4px;top:6px;bottom:6px;width:1px;background:var(--border)}
+.tl-item{position:relative;margin-bottom:1.3rem}
+.tl-dot{position:absolute;left:-1.4rem;top:4px;width:10px;height:10px;border-radius:50%;background:var(--flame);border:2px solid var(--abyss)}
+.tl-dot.gold{background:var(--gold)}.tl-dot.blue{background:var(--blue)}.tl-dot.green{background:var(--green)}
+.tl-date{font-family:var(--font-ui);font-size:0.48rem;letter-spacing:0.1em;color:var(--text-muted);margin-bottom:0.2rem;text-transform:uppercase}
+.tl-text{font-family:var(--font-display);font-size:0.95rem;color:var(--text-dim);line-height:1.55}
+.tl-text strong{color:var(--text);font-style:normal}
+/* DON MODAL */
+.don-amts{display:grid;grid-template-columns:repeat(3,1fr);gap:0.5rem;margin-bottom:1rem}
+.don-amt{padding:0.85rem 0.5rem;border:1px solid var(--border);background:var(--surface);cursor:pointer;text-align:center;transition:all 0.2s}
+.don-amt:hover{border-color:var(--border-gold);background:var(--gold-glow)}.don-amt.sel{border-color:var(--gold);background:var(--gold-glow)}
+.don-amt .dv{font-family:var(--font-title);font-size:1.4rem;letter-spacing:0.06em;display:block;color:var(--gold)}
+.don-amt .dl{font-family:var(--font-ui);font-size:0.5rem;letter-spacing:0.1em;color:var(--text-muted);display:block;margin-top:0.15rem}
+.don-free-inp{width:100%;background:var(--surface);border:1px dashed var(--border-gold);color:var(--text);font-family:var(--font-display);font-size:1.05rem;padding:0.85rem 1rem;outline:none;text-align:center;margin-bottom:1rem;transition:border-color 0.2s;-webkit-appearance:none}
+.don-free-inp:focus{border-color:var(--gold)}.don-free-inp::placeholder{color:var(--text-muted);font-style:italic}
+.don-transp{font-family:var(--font-display);font-size:0.88rem;font-style:italic;color:var(--text-muted);line-height:1.6;margin-bottom:1rem;padding:0.75rem 1rem;background:var(--surface);border-left:2px solid var(--gold)}
+/* EDIT PROFIL */
+.m-hint{font-family:var(--font-ui);font-size:0.5rem;color:var(--text-muted);margin-top:0.3rem;line-height:1.5}
+.settings-btn{width:34px;height:34px;display:flex;align-items:center;justify-content:center;background:var(--surface);border:1px solid var(--border);border-radius:50%;cursor:pointer;font-size:0.9rem;transition:border-color 0.2s}
+.sec-lbl{font-family:var(--font-ui);font-size:0.52rem;font-weight:500;letter-spacing:0.2em;text-transform:uppercase;color:var(--gold);padding:0.9rem 1rem 0.4rem;display:flex;align-items:center;justify-content:space-between}
+.sec-lbl span{color:var(--text-muted);font-weight:400}
+.sec-hdr{padding:1.1rem 1rem 0.6rem;display:flex;align-items:baseline;justify-content:space-between}
+.sec-ttl{font-family:var(--font-display);font-size:1.5rem;font-weight:600;line-height:1}
+.sec-cnt{font-family:var(--font-ui);font-size:0.58rem;letter-spacing:0.1em;color:var(--text-muted)}
+/* TOAST / PARTICLES */
+.toast{position:fixed;top:72px;left:50%;transform:translateX(-50%) translateY(-12px);background:var(--lift);border:1px solid var(--border-hi);padding:0.65rem 1.1rem;display:flex;align-items:center;gap:0.5rem;font-family:var(--font-ui);font-size:0.6rem;font-weight:500;letter-spacing:0.06em;color:var(--text);z-index:1000;white-space:nowrap;max-width:92%;transition:all 0.3s var(--ease-out);pointer-events:none;opacity:0}
+.toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+.particle{position:fixed;pointer-events:none;z-index:99999;border-radius:50%;animation:prise 1.1s ease-out forwards}
+@keyframes prise{0%{opacity:1;transform:translate(var(--tx,0px),0) scale(1)}100%{opacity:0;transform:translate(var(--tx,0px),-160px) scale(0)}}
+.cfp{position:fixed;pointer-events:none;z-index:99999;animation:cffall 1.8s ease-in forwards}
+@keyframes cffall{0%{transform:translateY(0) rotate(0deg);opacity:1}100%{transform:translateY(300px) rotate(720deg);opacity:0}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.fade-in{opacity:0;animation:fadeUp 0.45s var(--ease-out) forwards}
+</style>
+</head>
+<body>
+<div id="app">
+<!-- Effets visuels intégrés dans le DOM de l'app -->
+<canvas id="fx-canvas" style="position:fixed;inset:0;pointer-events:none;z-index:99998;width:100%;height:100%;max-width:480px;margin:0 auto"></canvas>
+<div id="notif-center" style="display:none;position:fixed;inset:0;max-width:480px;margin:0 auto;z-index:9000;pointer-events:all"></div>
+<div id="notif-popup" style="position:fixed;top:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;z-index:9500;pointer-events:none"></div>
 
--- Recréer la policy d'insertion de prières plus permissive
-drop policy if exists "Utilisateur publie ses prières" on public.prayers;
-create policy "Utilisateur publie ses prières"
-  on public.prayers for insert
-  to authenticated
-  with check (auth.uid() = user_id);
+<!-- ═══════════ SPLASH ═══════════ -->
+<div class="page active" id="p-splash" style="background:var(--void);justify-content:space-between">
+  <div class="auth-bg"></div><div class="auth-orb"></div>
+  <button onclick="toggleLang()" style="position:absolute;top:1.3rem;right:1.3rem;z-index:10;font-family:var(--font-ui);font-size:0.52rem;letter-spacing:0.15em;color:var(--text-muted);border:1px solid var(--border);padding:0.28rem 0.55rem;background:none;cursor:pointer" id="sl-lang">EN</button>
+  <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 2rem;text-align:center;position:relative;z-index:1;padding-top:5rem">
+    <div class="splash-logo">A<span class="r">PPP</span>RAY</div>
+    <div style="font-family:var(--font-display);font-style:italic;font-size:1rem;color:rgba(240,235,224,0.5);margin-top:0.4rem" id="sp-tag">La première infrastructure mondiale de la prière</div>
+    <div class="gold-line"></div>
+    <div style="font-family:var(--font-display);font-style:italic;font-size:0.88rem;color:rgba(240,235,224,0.32);line-height:1.7;max-width:240px" id="sp-verse">« Confie-toi en l'Éternel de tout ton cœur... » Proverbes 3 : 5</div>
+  </div>
+  <div style="padding:0 1.5rem 3rem;display:flex;flex-direction:column;gap:0.8rem;position:relative;z-index:1">
+    <button class="btn-main" onclick="goPage('signup')" id="sp-start">Commencer — C'est gratuit</button>
+    <button class="btn-outline" onclick="goPage('login')" id="sp-login">J'ai déjà un compte</button>
+    <button onclick="demoLogin()" style="background:none;border:none;color:var(--gold);font-family:var(--font-ui);font-size:0.62rem;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;cursor:pointer;padding:0.5rem;margin-top:0.3rem;text-align:center;width:100%;transition:opacity 0.2s;opacity:0.7" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'">✦ Mode démonstration</button>
+  </div>
+</div>
 
--- Recréer la policy de lecture
-drop policy if exists "Prières mondiales visibles par tous" on public.prayers;
-create policy "Prières mondiales visibles par tous"
-  on public.prayers for select
-  to anon, authenticated
-  using (visibility = 'world' or user_id = auth.uid());
+<!-- ═══════════ SIGNUP ═══════════ -->
+<div class="page" id="p-signup" style="background:var(--abyss)">
+  <div class="auth-hdr">
+    <div class="back-btn" onclick="goPage('splash')">←</div>
+    <div class="logo">A<span class="r">PPP</span>RAY</div>
+    <span class="step-lbl" id="su-step">Étape 1 / 3</span>
+    <button onclick="toggleLang()" class="lang-btn" style="margin-left:0.4rem" id="su-lang">EN</button>
+  </div>
+  <div class="auth-form">
+    <div class="form-title" id="su-title">Créer<br>un compte</div>
+    <div class="form-sub" id="su-sub">Rejoignez 2 milliards de chrétiens qui prient — enfin connectés.</div>
+    <div class="field-row" style="margin-bottom:0.9rem">
+      <input class="auth-input" style="margin-bottom:0" type="text" id="su-fn" oninput="checkSU()" placeholder="Harry"/>
+      <input class="auth-input" style="margin-bottom:0" type="text" id="su-ln" oninput="checkSU()" placeholder="MC-Harry"/>
+    </div>
+    <input class="auth-input" type="email" id="su-em" oninput="checkSU()" placeholder="vous@exemple.com"/>
+    <input class="auth-input" type="password" id="su-pw" oninput="checkPW();checkSU()" placeholder="8 caractères minimum"/>
+    <div class="pw-bars"><div class="pw-bar" id="pb1"></div><div class="pw-bar" id="pb2"></div><div class="pw-bar" id="pb3"></div><div class="pw-bar" id="pb4"></div></div>
+    <select class="auth-select" id="su-co" onchange="checkSU()">
+      <option value="" id="co-ph">Sélectionnez votre pays...</option>
+      <option>🇷🇪 La Réunion</option><option>🇫🇷 France</option><option>🇧🇪 Belgique</option>
+      <option>🇨🇭 Suisse</option><option>🇨🇦 Canada</option><option>🇸🇳 Sénégal</option>
+      <option>🇨🇲 Cameroun</option><option>🇨🇩 Congo RDC</option><option>🇳🇬 Nigeria</option>
+      <option>🇿🇦 Afrique du Sud</option><option>🇮🇳 Inde</option><option>🇧🇷 Brésil</option>
+      <option>🇺🇸 USA</option><option id="co-other">Autre pays...</option>
+    </select>
+    <div class="auth-sep"><div class="auth-sep-line"></div><span class="auth-sep-txt" id="su-or">ou continuer avec</span><div class="auth-sep-line"></div></div>
+    <button class="social-btn" onclick="doLogin()"><span>🔵</span><span id="su-g">Continuer avec Google</span></button>
+    <button class="social-btn" onclick="doLogin()"><span>🔷</span><span id="su-fb">Continuer avec Facebook</span></button>
+    <button class="social-btn" onclick="doLogin()"><span>💬</span><span id="su-wa">Continuer avec WhatsApp</span></button>
+    <div class="terms-row">
+      <div class="terms-box" id="terms-box" onclick="toggleTerms()"></div>
+      <div class="terms-txt" id="terms-txt">J'accepte les <a href="#">Conditions d'utilisation</a> et la <a href="#">Politique de confidentialité</a> d'AppPray.</div>
+    </div>
+    <button class="btn-main" id="su-btn" disabled onclick="doSignup()"><span id="su-cta">Créer mon compte 🙏</span></button>
+    <div class="auth-switch"><span id="su-sw1">Déjà un compte ? </span><span class="auth-link" onclick="goPage('login')" id="su-sw2">Se connecter</span></div>
+  </div>
+</div>
 
--- Policy profil insert plus permissive
-drop policy if exists "Profil créé automatiquement" on public.profiles;
-create policy "Profil créé automatiquement"
-  on public.profiles for insert
-  to authenticated
-  with check (auth.uid() = id);
+<!-- ═══════════ LOGIN ═══════════ -->
+<div class="page" id="p-login" style="background:var(--abyss)">
+  <div class="auth-hdr">
+    <div class="back-btn" onclick="goPage('splash')">←</div>
+    <div class="logo">A<span class="r">PPP</span>RAY</div>
+    <button onclick="toggleLang()" class="lang-btn" style="margin-left:auto" id="li-lang">EN</button>
+  </div>
+  <div class="auth-form">
+    <div class="form-title" id="li-title">Bon<br>retour 🙏</div>
+    <div class="form-sub" id="li-sub">Continuez à prier avec la communauté mondiale.</div>
+    <input class="auth-input" type="email" id="li-em" oninput="checkLI()" placeholder="vous@exemple.com"/>
+    <input class="auth-input" type="password" id="li-pw" oninput="checkLI()" placeholder="••••••••"/>
+    <div class="auth-sep"><div class="auth-sep-line"></div><span class="auth-sep-txt" id="li-or">ou</span><div class="auth-sep-line"></div></div>
+    <button class="social-btn" onclick="doLogin()"><span>🔵</span><span id="li-g">Continuer avec Google</span></button>
+    <button class="social-btn" onclick="doLogin()"><span>🔷</span><span id="li-fb">Continuer avec Facebook</span></button>
+    <button class="social-btn" onclick="doLogin()"><span>💬</span><span id="li-wa">Continuer avec WhatsApp</span></button>
+    <button class="btn-main" id="li-btn" disabled onclick="doLogin()" style="margin-top:0.5rem"><span id="li-cta">Se connecter</span></button>
+    <div class="auth-switch"><span id="li-sw1">Pas encore de compte ? </span><span class="auth-link" onclick="goPage('signup')" id="li-sw2">S'inscrire gratuitement</span></div>
+  </div>
+</div>
 
--- Accès lecture profil
-drop policy if exists "Profils visibles par tous" on public.profiles;
-create policy "Profils visibles par tous"
-  on public.profiles for select
-  to anon, authenticated
-  using (true);
+<!-- ═══════════ VERIFY ═══════════ -->
+<div class="page" id="p-verify" style="background:var(--abyss)">
+  <div class="auth-hdr">
+    <div class="back-btn" onclick="goPage('signup')">←</div>
+    <div class="logo">A<span class="r">PPP</span>RAY</div>
+    <span class="step-lbl" id="ve-step">Étape 2 / 3</span>
+  </div>
+  <div class="auth-form" style="text-align:center">
+    <div style="font-size:3rem;margin:1.5rem 0 1rem">📧</div>
+    <div class="form-title" id="ve-title" style="text-align:center">Vérifiez<br>votre e-mail</div>
+    <div class="form-sub" id="ve-sub" style="text-align:center">Nous avons envoyé un code à 6 chiffres.</div>
+    <div class="otp-row">
+      <input class="otp-input" id="o1" type="text" maxlength="1" inputmode="numeric" oninput="otpNext(this,'o2')"/>
+      <input class="otp-input" id="o2" type="text" maxlength="1" inputmode="numeric" oninput="otpNext(this,'o3')"/>
+      <input class="otp-input" id="o3" type="text" maxlength="1" inputmode="numeric" oninput="otpNext(this,'o4')"/>
+      <input class="otp-input" id="o4" type="text" maxlength="1" inputmode="numeric" oninput="otpNext(this,'o5')"/>
+      <input class="otp-input" id="o5" type="text" maxlength="1" inputmode="numeric" oninput="otpNext(this,'o6')"/>
+      <input class="otp-input" id="o6" type="text" maxlength="1" inputmode="numeric" oninput="otpDone()"/>
+    </div>
+    <div style="font-family:var(--font-ui);font-size:0.78rem;color:var(--text-muted);cursor:pointer;margin-bottom:1.5rem">
+      <span id="ve-resend">Pas reçu ? </span><span style="color:var(--gold)" onclick="showToast('📧','Code renvoyé !')">Renvoyer</span>
+    </div>
+    <button class="btn-main" id="ve-btn" disabled onclick="goPage('onboard')"><span id="ve-cta">Confirmer</span></button>
+  </div>
+</div>
 
--- Vérifier que les grants sont bien en place
-grant all on public.prayers to authenticated;
-grant all on public.profiles to authenticated;
-grant select on public.prayers to anon;
-grant select on public.profiles to anon;
+<!-- ═══════════ ONBOARDING ═══════════ -->
+<div class="page" id="p-onboard" style="background:var(--void)">
+  <div class="auth-orb" style="opacity:0.6"></div>
+  <div class="ob-progress"><div class="ob-seg active" id="op1"></div><div class="ob-seg" id="op2"></div><div class="ob-seg" id="op3"></div><div class="ob-seg" id="op4"></div></div>
+  <div class="ob-content">
+    <div class="ob-step active" id="obs1">
+      <div class="ob-emoji">🙏</div>
+      <div class="ob-title">Bienvenue dans<br>la <span class="ac">famille</span></div>
+      <div class="ob-body" id="ob1-body">Tu rejoins des milliers de croyants du monde entier qui prient ensemble, se soutiennent et voient Dieu agir — chaque jour.</div>
+      <div class="ob-stat"><span style="font-size:1.3rem;flex-shrink:0">🌍</span><div><div class="ob-stat-lbl">En ce moment</div><div class="ob-stat-val" id="ob-live">2 847 personnes prient à travers le monde</div></div></div>
+      <div style="height:0.6rem"></div>
+      <div class="ob-stat gold"><span style="font-size:1.3rem;flex-shrink:0">✨</span><div><div class="ob-stat-lbl m">Cette semaine</div><div class="ob-stat-val" id="ob-ans">147 prières exaucées partagées</div></div></div>
+    </div>
+    <div class="ob-step" id="obs2">
+      <div class="ob-emoji">🔔</div>
+      <div class="ob-title">Restez<br><span class="ac">connecté</span></div>
+      <div class="ob-body" id="ob2-body">Choisissez votre moment de prière quotidien.</div>
+      <div style="font-family:var(--font-ui);font-size:0.58rem;letter-spacing:0.2em;color:var(--gold);text-transform:uppercase;margin-bottom:0.7rem" id="ob2-tl">Mon heure de prière</div>
+      <div class="time-grid">
+        <div class="time-opt active" onclick="selTime(this)">🌅 6h00</div><div class="time-opt" onclick="selTime(this)">☀️ 7h00</div>
+        <div class="time-opt" onclick="selTime(this)">🌤️ 8h00</div><div class="time-opt" onclick="selTime(this)">🕛 12h00</div>
+        <div class="time-opt" onclick="selTime(this)">🌆 18h00</div><div class="time-opt" onclick="selTime(this)">🌙 21h00</div>
+      </div>
+    </div>
+    <div class="ob-step" id="obs3">
+      <div class="ob-emoji">👥</div>
+      <div class="ob-title">Vos<br><span class="ac">intérêts</span></div>
+      <div class="ob-body" id="ob3-body">Quels sujets vous tiennent à cœur ? Votre feed sera personnalisé.</div>
+      <div class="ob-cats">
+        <div class="ob-cat active" onclick="this.classList.toggle('active')">🏥 Santé</div>
+        <div class="ob-cat" onclick="this.classList.toggle('active')">👨‍👩‍👧 Famille</div>
+        <div class="ob-cat active" onclick="this.classList.toggle('active')">🌍 Mission</div>
+        <div class="ob-cat" onclick="this.classList.toggle('active')">💑 Couple</div>
+        <div class="ob-cat" onclick="this.classList.toggle('active')">💼 Travail</div>
+        <div class="ob-cat active" onclick="this.classList.toggle('active')">✝️ Foi</div>
+        <div class="ob-cat" onclick="this.classList.toggle('active')">💰 Finances</div>
+        <div class="ob-cat" onclick="this.classList.toggle('active')">📚 Études</div>
+        <div class="ob-cat" onclick="this.classList.toggle('active')">🎯 Projets</div>
+        <div class="ob-cat" onclick="this.classList.toggle('active')">🚨 Urgence</div>
+      </div>
+    </div>
+    <div class="ob-step" id="obs4">
+      <div class="ob-emoji">✍️</div>
+      <div class="ob-title">Votre<br><span class="ac">première</span> prière</div>
+      <div class="ob-body" id="ob4-body" style="margin-bottom:0.75rem">Partagez ce qui est sur votre cœur — la communauté prie avec vous dès maintenant.</div>
+      <div class="prayer-area"><textarea class="prayer-ta" id="fp-ta" maxlength="280" oninput="checkFP()"></textarea><div class="prayer-char"><span id="fp-cnt">0</span>/280</div></div>
+      <div class="vis-opts">
+        <div class="vis-opt active" onclick="selVis(this)"><span class="vi">🌍</span><span class="vl" id="vl-w">Monde</span></div>
+        <div class="vis-opt" onclick="selVis(this)"><span class="vi">👥</span><span class="vl" id="vl-g">Groupes</span></div>
+        <div class="vis-opt" onclick="selVis(this)"><span class="vi">🔒</span><span class="vl" id="vl-p">Privé</span></div>
+        <div class="vis-opt" onclick="selVis(this)"><span class="vi">👤</span><span class="vl" id="vl-a">Anonyme</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="ob-bottom">
+    <button class="btn-main" id="ob-next" onclick="nextOb()">Continuer →</button>
+    <button class="skip-btn" id="ob-skip" onclick="skipOb()">Passer cette étape</button>
+  </div>
+</div>
+
+<!-- ═══════════ FEED ═══════════ -->
+<div class="page" id="p-feed">
+  <header class="topbar">
+    <div class="logo">A<span class="r">PPP</span>RAY</div>
+    <div class="topbar-live" onclick="showToast('🌍',liveMsg())">
+      <div class="live-dot"></div>
+      <div class="live-txt"><strong id="live-num">2 847</strong> <span id="live-lbl">prient</span></div>
+    </div>
+    <div class="topbar-right">
+      <button class="lang-btn" onclick="toggleLang()" id="fd-lang">EN</button>
+      <div class="tb-btn" onclick="openNotifCenter()">🔔<div class="notif-dot"></div></div>
+      <div class="av-btn" onclick="navTo('profile')">H</div>
+    </div>
+  </header>
+  <div class="urgent-banner" id="ub"><span class="ub-icon">🚨</span><span class="ub-txt" id="ub-txt">3 prières urgentes dans votre réseau</span><span class="ub-close" onclick="closeUB()">✕</span></div>
+  <div class="cat-bar" id="cat-bar"></div>
+  <div class="pub-area">
+    <div class="pub-trigger" onclick="openPubM()">
+      <div class="pub-av">H</div>
+      <span class="pub-ph" id="pub-ph">Partagez un sujet de prière...</span>
+      <div class="pub-icons">
+        <div class="pub-icon-btn" onclick="event.stopPropagation();showToast('🎤',t('mic'))">🎤</div>
+        <div class="pub-icon-btn" onclick="event.stopPropagation();showToast('📷',t('photo'))">📷</div>
+      </div>
+    </div>
+  </div>
+  <div class="ptr-bar" id="ptr"><div class="ptr-spin"></div><span class="ptr-txt" id="ptr-txt">Actualisation...</span></div>
+  <div class="scroll-area" id="feed-scroll">
+    <div class="feed-divider"><div class="fd-line"></div><span class="fd-x">✝</span><span class="fd-txt" id="feed-ttl">Prières récentes</span><span class="fd-x">✝</span><div class="fd-line"></div></div>
+    <div id="feed-cards"></div>
+    <div style="height:1rem"></div>
+  </div>
+  <nav class="bottom-nav" id="nav-feed">
+    <button class="nav-item active" onclick="navTo('feed')"><span class="nav-icon">🏠</span><span class="nav-label" id="nl-f1">Feed</span></button>
+    <button class="nav-item" onclick="navTo('explore')"><span class="nav-icon">🔍</span><span class="nav-label" id="nl-e1">Explorer</span></button>
+    <div class="nav-center"><div class="nav-center-btn" onclick="openPubM()">🙏</div></div>
+    <button class="nav-item" onclick="navTo('groups')"><span class="nav-icon">👥</span><span class="nav-label" id="nl-g1">Groupes</span></button>
+    <button class="nav-item" onclick="navTo('profile')"><span class="nav-icon">👤</span><span class="nav-label" id="nl-p1">Profil</span></button>
+  </nav>
+</div>
+
+<!-- ═══════════ EXPLORER ═══════════ -->
+<div class="page" id="p-explore">
+  <header class="topbar">
+    <div class="logo">A<span class="r">PPP</span>RAY</div>
+    <div class="topbar-right">
+      <button class="lang-btn" onclick="toggleLang()" id="ex-lang">EN</button>
+      <div class="av-btn" onclick="navTo('profile')">H</div>
+    </div>
+  </header>
+  <div class="search-bar"><div class="sw"><span class="si">🔍</span><input class="s-inp" id="s-inp" type="text" oninput="handleSearch(this)"/><span class="s-clr" id="s-clr" onclick="clearSearch()">✕</span></div></div>
+  <div class="tabs">
+    <button class="tab active" onclick="expTab('monde',this)" id="etm">Monde</button>
+    <button class="tab" onclick="expTab('trends',this)" id="ett">Tendances</button>
+    <button class="tab" onclick="expTab('chals',this)" id="etc">Challenges</button>
+    <button class="tab" onclick="expTab('testis',this)" id="ette">Témoignages</button>
+  </div>
+  <div class="scroll-area" id="exp-scroll"></div>
+  <nav class="bottom-nav">
+    <button class="nav-item" onclick="navTo('feed')"><span class="nav-icon">🏠</span><span class="nav-label" id="nl-f2">Feed</span></button>
+    <button class="nav-item active" onclick="navTo('explore')"><span class="nav-icon">🔍</span><span class="nav-label" id="nl-e2">Explorer</span></button>
+    <div class="nav-center"><div class="nav-center-btn" onclick="openPubM()">🙏</div></div>
+    <button class="nav-item" onclick="navTo('groups')"><span class="nav-icon">👥</span><span class="nav-label" id="nl-g2">Groupes</span></button>
+    <button class="nav-item" onclick="navTo('profile')"><span class="nav-icon">👤</span><span class="nav-label" id="nl-p2">Profil</span></button>
+  </nav>
+</div>
+
+<!-- ═══════════ GROUPES ═══════════ -->
+<div class="page" id="p-groups">
+  <header class="topbar">
+    <div class="logo">A<span class="r">PPP</span>RAY</div>
+    <div class="topbar-right">
+      <button class="lang-btn" onclick="toggleLang()" id="gr-lang">EN</button>
+      <button class="create-btn" onclick="openCreateGrpM()" id="grp-create-btn">＋ Créer</button>
+    </div>
+  </header>
+  <div class="plan-banner"><span class="plan-txt" id="plan-txt">Plan gratuit — <strong>3 / 10</strong> membres</span><button class="plan-up" onclick="showToast('⭐',t('upgrade'))" id="plan-up">Évoluer</button></div>
+  <div class="tabs">
+    <button class="tab active" onclick="grpTab('mine',this)" id="gtm">Mes groupes</button>
+    <button class="tab" onclick="grpTab('explore',this)" id="gte">Explorer</button>
+    <button class="tab" onclick="grpTab('invit',this)" id="gti">Invitations <span class="tab-badge" id="inv-badge">2</span></button>
+  </div>
+  <div class="scroll-area" id="grp-scroll"></div>
+  <nav class="bottom-nav">
+    <button class="nav-item" onclick="navTo('feed')"><span class="nav-icon">🏠</span><span class="nav-label" id="nl-f3">Feed</span></button>
+    <button class="nav-item" onclick="navTo('explore')"><span class="nav-icon">🔍</span><span class="nav-label" id="nl-e3">Explorer</span></button>
+    <div class="nav-center"><div class="nav-center-btn" onclick="openPubM()">🙏</div></div>
+    <button class="nav-item active" onclick="navTo('groups')"><span class="nav-icon">👥</span><span class="nav-label" id="nl-g3">Groupes</span></button>
+    <button class="nav-item" onclick="navTo('profile')"><span class="nav-icon">👤</span><span class="nav-label" id="nl-p3">Profil</span></button>
+  </nav>
+</div>
+
+<!-- ═══════════ PROFIL ═══════════ -->
+<div class="page" id="p-profile">
+  <header class="topbar">
+    <div class="logo">A<span class="r">PPP</span>RAY</div>
+    <div class="topbar-right">
+      <button class="lang-btn" onclick="toggleLang()" id="pr-lang">EN</button>
+      <div class="settings-btn" onclick="openSettings()">⚙️</div>
+    </div>
+  </header>
+  <div class="scroll-area" id="pro-scroll">
+    <div class="cover-band"><button class="cover-edit-btn" onclick="showToast('🖼️',t('soon'))" id="cover-edit">✏️ Modifier la couverture</button></div>
+    <div class="pro-hdr fade-in">
+      <div class="pav-wrap"><div class="pav">H</div><div class="pav-v">✓</div><div class="pav-e" onclick="showToast('📷',t('soon'))">📷</div></div>
+      <div class="pname" id="pro-name">Harry MC-Harry</div>
+      <div class="phandle">@mc.harry · <span id="pro-since">Membre depuis Juin 2025</span></div>
+      <div class="pbio" id="pro-bio">Pasteur · Conférencier · Créateur de contenu. La Réunion 🇷🇪 — Là où la foi rencontre la scène.</div>
+      <div class="pmeta">
+        <span class="pmi">📍 <span>La Réunion, France</span></span>
+        <span class="pmi">🌍 <span id="pro-langs">Français · Anglais · Créole</span></span>
+        <span class="pmi" id="pro-church-wrap">⛪ <span id="pro-church">Église Évangélique</span></span>
+      </div>
+      <div class="p-acts">
+        <button class="btn-edit-p" onclick="openEditProM()" id="pro-edit-btn">✏️ Modifier le profil</button>
+        <button class="btn-share-p" onclick="showToast('🔗',t('soon'))">↗️</button>
+      </div>
+    </div>
+    <div class="stats-grid fade-in">
+      <div class="stat-box"><span class="stat-n red">24</span><span class="stat-l" id="sl-pr">Prières publiées</span></div>
+      <div class="stat-box"><span class="stat-n">1 847</span><span class="stat-l" id="sl-pp">Ont prié pour moi</span></div>
+      <div class="stat-box"><span class="stat-n gold">7</span><span class="stat-l" id="sl-an">Réponses reçues</span></div>
+      <div class="stat-box"><span class="stat-n">3</span><span class="stat-l" id="sl-gr">Groupes actifs</span></div>
+    </div>
+    <div class="imp-sect fade-in">
+      <div class="imp-hdr">
+        <span class="imp-lbl" id="imp-lbl">Niveau d'impact spirituel</span>
+        <span class="imp-lvl"><span id="imp-lvl">Niveau 4</span> — <span id="imp-name">Intercesseur</span></span>
+      </div>
+      <div class="prog-track"><div class="prog-fill" id="pro-fill"></div></div>
+      <div class="badges-row">
+        <div class="badge-pill earned">🙏 <span id="pb1t">Intercesseur fidèle</span></div>
+        <div class="badge-pill earned">✨ <span id="pb2t">7 exaucements</span></div>
+        <div class="badge-pill earned">🌍 <span id="pb3t">Prière mondiale</span></div>
+        <div class="badge-pill earned">⭐ <span id="pb4t">Fondateur AppPray</span></div>
+        <div class="badge-pill">🏆 <span id="pb5t">50 prières (bientôt)</span></div>
+      </div>
+    </div>
+    <div class="don-strip fade-in" onclick="openDonM()">
+      <span class="don-icon">❤️</span>
+      <div class="don-info"><div class="don-ttl" id="don-ttl">Soutenir la vision AppPray</div><div class="don-sb" id="don-sb">Gratuit pour prier — votre don construit la suite.</div></div>
+      <button class="don-cta-b" onclick="event.stopPropagation();openDonM()" id="don-cta">Faire un don</button>
+    </div>
+    <div class="tabs">
+      <button class="tab active" onclick="proTab('prayers',this)" id="pt-pr">Mes prières</button>
+      <button class="tab" onclick="proTab('testi',this)" id="pt-te">Témoignages</button>
+      <button class="tab" onclick="proTab('journey',this)" id="pt-jo">Parcours</button>
+    </div>
+    <div id="pro-content"></div>
+    <div style="height:1rem"></div>
+  </div>
+  <nav class="bottom-nav">
+    <button class="nav-item" onclick="navTo('feed')"><span class="nav-icon">🏠</span><span class="nav-label" id="nl-f4">Feed</span></button>
+    <button class="nav-item" onclick="navTo('explore')"><span class="nav-icon">🔍</span><span class="nav-label" id="nl-e4">Explorer</span></button>
+    <div class="nav-center"><div class="nav-center-btn" onclick="openPubM()">🙏</div></div>
+    <button class="nav-item" onclick="navTo('groups')"><span class="nav-icon">👥</span><span class="nav-label" id="nl-g4">Groupes</span></button>
+    <button class="nav-item active" onclick="navTo('profile')"><span class="nav-icon">👤</span><span class="nav-label" id="nl-p4">Profil</span></button>
+  </nav>
+</div>
+
+</div><!-- #app -->
+<div id="modals"></div>
+<div class="toast" id="toast"><span id="t-icon"></span><span id="t-msg"></span></div>
+<script>
+/* ═══════ STATE ═══════ */
+var lang='fr',currentPage='splash',termsOk=false,obStep=1,fpOk=false;
+var anonOn=false,modalCat=0,donAmt=10,selEmoji='🙏';
+var prayedIds=new Set(),expandedIds=new Set();
+var activeCat='all',activeExpTab='monde',activeGrpTab='mine',activeProTab='prayers';
+var joinedGroups=new Set([1,2,3]),dismissedInvites=new Set(),joinedChallenges=new Set();
+var invitCount=2;
+
+/* ═══════ TRANSLATIONS ═══════ */
+var TR={
+fr:{tag:'La première infrastructure mondiale de la prière',verse:'« Confie-toi en l\'Éternel de tout ton cœur... » Proverbes 3 : 5',
+start:'Commencer — C\'est gratuit',have_acc:'J\'ai déjà un compte',
+su_step:'Étape 1 / 3',su_title:'Créer\nun compte',su_sub:'Rejoignez 2 milliards de chrétiens qui prient — enfin connectés.',
+su_or:'ou continuer avec',google:'Continuer avec Google',fb:'Continuer avec Facebook',wa:'Continuer avec WhatsApp',
+terms:'J\'accepte les <a href="#">Conditions d\'utilisation</a> et la <a href="#">Politique de confidentialité</a> d\'AppPray.',
+su_cta:'Créer mon compte 🙏',su_sw1:'Déjà un compte ? ',su_sw2:'Se connecter',
+co_ph:'Sélectionnez votre pays...',co_other:'Autre pays...',
+li_title:'Bon\nretour 🙏',li_sub:'Continuez à prier avec la communauté mondiale.',
+li_cta:'Se connecter',li_sw1:'Pas encore de compte ? ',li_sw2:'S\'inscrire gratuitement',
+ve_step:'Étape 2 / 3',ve_title:'Vérifiez\nvotre e-mail',ve_sub:'Nous avons envoyé un code à 6 chiffres.',
+ve_resend:'Pas reçu ? ',ve_cta:'Confirmer',
+pw_weak:'Trop faible',pw_med:'Moyen',pw_str:'Fort',pw_vstr:'Très fort',
+login_ok:'Connexion réussie — bienvenue ! 🙏',
+ob1:'Tu rejoins des milliers de croyants du monde entier qui prient ensemble.',ob2:'Choisissez votre moment de prière quotidien.',
+ob3:'Quels sujets vous tiennent à cœur ? Votre feed sera personnalisé.',ob4:'Partagez ce qui est sur votre cœur — la communauté prie avec vous.',
+ob_live:'2 847 personnes prient à travers le monde',ob_ans:'147 prières exaucées partagées cette semaine',
+ob_tl:'Mon heure de prière',ob_next:['Continuer →','Continuer →','Continuer →','Publier ma première prière 🙏'],ob_skip:'Passer cette étape',
+vl_w:'Monde',vl_g:'Groupes',vl_p:'Privé',vl_a:'Anonyme',fp_ph:'Seigneur, je Te confie...',
+feed:'Feed',explore:'Explorer',groups:'Groupes',profile:'Profil',
+praying:'personnes prient',have_prayed:'ont prié',pray:'Je prie',prayed:'Prié',replies:'Réponses',share:'Partager',
+read_more:'Lire plus',collapse:'Réduire',
+ub:'3 prières urgentes dans votre réseau',pub_ph:'Partagez un sujet de prière...',feed_ttl:'Prières récentes',
+notif:'3 personnes prient pour vous en ce moment',soon:'Bientôt disponible',mic:'Prière vocale — bientôt',photo:'Photo — bientôt',
+pray_added:'Vous priez pour cette intention 🙏',pray_removed:'Retiré de vos prières',shared:'Lien copié — bientôt !',published:'Prière publiée 🙏',
+u_lbl:'Urgent',o_lbl:'En cours',a_lbl:'Exaucé ✨',celeb_t:'Dieu a répondu !',celeb_s:'prières unies pour ce miracle',
+new_prayer:'Nouvelle prière',pub_sub:'Partagez ce qui est sur votre cœur.',
+ml_ttl:'Titre *',ml_body:'Détails (facultatif)',ml_cat:'Catégorie',ml_vis:'Visibilité',
+ml_w:'Monde',ml_g:'Groupes',ml_p:'Privé',ml_at:'Prière anonyme',ml_as:'Publier sans votre nom ni photo',
+ml_voc:'Prière vocale',ml_photo:'Photo',ml_sub:'Publier ma prière 🙏',ptr:'Actualisation...',
+anon_u:'Un frère / Une sœur',anon_l:'Anonyme',live_s:'prient en ce moment',
+tab_m:'Monde',tab_t:'Tendances',tab_c:'Challenges',tab_te:'Témoignages',s_ph:'Rechercher une prière, un pays...',
+glob_t:'La prière\nmondiale',glob_s:'en temps réel',glob_d:'2 milliards de chrétiens. Une seule plateforme.',
+stat_pr:'Prières actives',stat_co:'Pays représentés',stat_an:'Exaucées ce mois',stat_pe:'Intercesseurs actifs',
+ctries:'Prières par pays',impact:'Impact mondial',inters:'Intercesseurs actifs',
+trending:'Tendances mondiales',chals:'Challenges actifs',testis:'Témoignages récents',
+chal_b:'Challenge en cours',days_l:'jours restants',join_c:'Rejoindre',joined_c:'Rejoint ✓',
+toast_c:'Challenge rejoint ! 🔥',toast_te:'Gloire à Dieu ! 🙏',ans_b:'Exaucé ✨',
+grp_mine:'Mes groupes',grp_exp:'Explorer',grp_inv:'Invitations',
+plan_txt:'Plan gratuit — <strong>3 / 10</strong> membres',upgrade:'Plans premium — bientôt',create_grp:'＋ Créer',
+open:'Ouvrir',join:'Rejoindre',members:'membres',prayers:'prières',adm:'Admin',mem:'Membre',
+grp_joined:'Groupe rejoint 🙏',grp_open:'Ouverture du groupe — bientôt !',grp_created:'Groupe créé ! 🎉',
+inv_from:'Invité par',inv_acc:'Accepter',inv_dec:'Refuser',inv_acced:'Invitation acceptée — bienvenue !',inv_deced:'Invitation refusée',
+no_invit:'Aucune invitation en attente',
+cg_ttl:'Créer un groupe',cg_sub:'Famille, cellule, église, réseau missionnaire — votre communauté vous attend.',
+ml_gn:'Nom du groupe *',ml_gd:'Description',ml_gt:'Type de groupe',ml_gpr:'Confidentialité',ml_gpl:'Tarification',ml_gs:'Créer le groupe 👥',
+gn_ph:'Ex: Cellule de prière Marseille...',gd_ph:'Décrivez l\'objectif...',
+pub_s:'Public',by_inv:'Sur invitation',priv:'Privé',
+pt1:'1–10 membres',pp1:'Gratuit',pt2:'11–50 membres',pp2:'9,99€ / mois',pt3:'51–200 membres',pp3:'29,99€ / mois',pt4:'200+ membres',pp4:'Sur mesure',
+pro_since:'Membre depuis',pro_edit:'✏️ Modifier le profil',cover_edit:'✏️ Modifier la couverture',
+sl_pr:'Prières publiées',sl_pp:'Ont prié pour moi',sl_an:'Réponses reçues',sl_gr:'Groupes actifs',
+imp_l:'Niveau d\'impact spirituel',imp_lv:'Niveau 4',imp_n:'Intercesseur',
+pb1:'Intercesseur fidèle',pb2:'7 exaucements',pb3:'Prière mondiale',pb4:'Fondateur AppPray',pb5:'50 prières (bientôt)',
+don_t:'Soutenir la vision AppPray',don_s:'Gratuit pour prier — votre don construit la suite.',don_cta:'Faire un don',
+pt_pr:'Mes prières',pt_te:'Témoignages',pt_jo:'Parcours',
+a_lbl_p:'Exaucé ✨',o_lbl_p:'En cours',u_lbl_p:'Urgent',
+dm_t:'Soutenir AppPray ❤️',dl_co:'Un café',dl_me:'Un repas',dl_su:'Soutien',dl_pa:'Partenaire',dl_vi:'Vision',dl_fr:'Libre',
+don_tr:'Chaque don est utilisé pour le développement, l\'hébergement et le déploiement mondial d\'AppPray. 100% transparent.',
+don_conf:'Don de {amt}€ confirmé — merci ! ❤️',
+em_t:'Modifier le profil',em_nm:'Nom affiché',em_bi:'Bio',em_lo:'Localisation',em_ch:'Église / Communauté',em_li:'Lien',
+em_hint:'Laissez vide si vous ne faites pas partie d\'une église',em_sb:'Enregistrer',saved:'Profil mis à jour ✓',
+pro_langs:'Français · Anglais · Créole',tl_t:'Timeline spirituelle',testi_l:'Témoignage',
+cb_t:'Créer un nouveau groupe',cb_d:'Famille, cellule, église, réseau missionnaire.'},
+en:{tag:'The world\'s first global prayer infrastructure',verse:'« Trust in the Lord with all your heart... » Proverbs 3:5',
+start:'Get started — It\'s free',have_acc:'I already have an account',
+su_step:'Step 1 / 3',su_title:'Create\nan account',su_sub:'Join 2 billion Christians who pray — finally connected.',
+su_or:'or continue with',google:'Continue with Google',fb:'Continue with Facebook',wa:'Continue with WhatsApp',
+terms:'I accept AppPray\'s <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a>.',
+su_cta:'Create my account 🙏',su_sw1:'Already have an account? ',su_sw2:'Sign in',
+co_ph:'Select your country...',co_other:'Other country...',
+li_title:'Welcome\nback 🙏',li_sub:'Continue praying with the global community.',
+li_cta:'Sign in',li_sw1:'No account yet? ',li_sw2:'Sign up for free',
+ve_step:'Step 2 / 3',ve_title:'Check your\nemail',ve_sub:'We sent a 6-digit code.',
+ve_resend:'Didn\'t receive it? ',ve_cta:'Confirm',
+pw_weak:'Too weak',pw_med:'Medium',pw_str:'Strong',pw_vstr:'Very strong',
+login_ok:'Signed in — welcome! 🙏',
+ob1:'You\'re joining thousands of believers worldwide who pray together.',ob2:'Choose your daily prayer time.',
+ob3:'Which topics matter most? Your feed will be personalized.',ob4:'Share what\'s on your heart — the community prays with you now.',
+ob_live:'2,847 people praying around the world',ob_ans:'147 answered prayers shared this week',
+ob_tl:'My prayer time',ob_next:['Continue →','Continue →','Continue →','Publish my first prayer 🙏'],ob_skip:'Skip this step',
+vl_w:'World',vl_g:'Groups',vl_p:'Private',vl_a:'Anonymous',fp_ph:'Lord, I entrust You with...',
+feed:'Feed',explore:'Explore',groups:'Groups',profile:'Profile',
+praying:'people praying',have_prayed:'prayed',pray:'Praying',prayed:'Prayed',replies:'Replies',share:'Share',
+read_more:'Read more',collapse:'Collapse',
+ub:'3 urgent prayers in your network',pub_ph:'Share a prayer request...',feed_ttl:'Recent prayers',
+notif:'3 people are praying for you right now',soon:'Coming soon',mic:'Voice prayer — coming soon',photo:'Photo — coming soon',
+pray_added:'You\'re praying for this intention 🙏',pray_removed:'Removed from your prayers',shared:'Link copied — coming soon!',published:'Prayer published 🙏',
+u_lbl:'Urgent',o_lbl:'Ongoing',a_lbl:'Answered ✨',celeb_t:'God answered!',celeb_s:'prayers united for this miracle',
+new_prayer:'New prayer',pub_sub:'Share what\'s on your heart.',
+ml_ttl:'Title *',ml_body:'Details (optional)',ml_cat:'Category',ml_vis:'Visibility',
+ml_w:'World',ml_g:'Groups',ml_p:'Private',ml_at:'Anonymous prayer',ml_as:'Publish without your name or photo',
+ml_voc:'Voice prayer',ml_photo:'Photo',ml_sub:'Publish my prayer 🙏',ptr:'Refreshing...',
+anon_u:'A brother / A sister',anon_l:'Anonymous',live_s:'praying right now',
+tab_m:'World',tab_t:'Trending',tab_c:'Challenges',tab_te:'Testimonies',s_ph:'Search a prayer, country...',
+glob_t:'Global\nprayer',glob_s:'in real time',glob_d:'2 billion Christians. One platform.',
+stat_pr:'Active prayers',stat_co:'Countries',stat_an:'Answered this month',stat_pe:'Active intercessors',
+ctries:'Prayers by country',impact:'Global impact',inters:'Active intercessors',
+trending:'Global trending',chals:'Active challenges',testis:'Recent testimonies',
+chal_b:'Ongoing challenge',days_l:'days left',join_c:'Join',joined_c:'Joined ✓',
+toast_c:'Challenge joined! 🔥',toast_te:'Glory to God! 🙏',ans_b:'Answered ✨',
+grp_mine:'My groups',grp_exp:'Explore',grp_inv:'Invitations',
+plan_txt:'Free plan — <strong>3 / 10</strong> members',upgrade:'Premium plans — coming soon',create_grp:'＋ Create',
+open:'Open',join:'Join',members:'members',prayers:'prayers',adm:'Admin',mem:'Member',
+grp_joined:'Group joined 🙏',grp_open:'Opening group — coming soon!',grp_created:'Group created! 🎉',
+inv_from:'Invited by',inv_acc:'Accept',inv_dec:'Decline',inv_acced:'Invitation accepted — welcome!',inv_deced:'Invitation declined',
+no_invit:'No pending invitations',
+cg_ttl:'Create a group',cg_sub:'Family, cell group, church, missionary network — your community awaits.',
+ml_gn:'Group name *',ml_gd:'Description',ml_gt:'Group type',ml_gpr:'Privacy',ml_gpl:'Pricing',ml_gs:'Create group 👥',
+gn_ph:'E.g: Prayer cell Marseille...',gd_ph:'Describe the purpose...',
+pub_s:'Public',by_inv:'By invite',priv:'Private',
+pt1:'1–10 members',pp1:'Free',pt2:'11–50 members',pp2:'€9.99 / month',pt3:'51–200 members',pp3:'€29.99 / month',pt4:'200+ members',pp4:'Custom',
+pro_since:'Member since',pro_edit:'✏️ Edit profile',cover_edit:'✏️ Edit cover',
+sl_pr:'Prayers posted',sl_pp:'Prayed for me',sl_an:'Answers received',sl_gr:'Active groups',
+imp_l:'Spiritual impact level',imp_lv:'Level 4',imp_n:'Intercessor',
+pb1:'Faithful intercessor',pb2:'7 answers',pb3:'Global prayer',pb4:'AppPray founder',pb5:'50 prayers (soon)',
+don_t:'Support the AppPray vision',don_s:'Free to pray — your donation builds what\'s next.',don_cta:'Donate',
+pt_pr:'My prayers',pt_te:'Testimonies',pt_jo:'Journey',
+a_lbl_p:'Answered ✨',o_lbl_p:'Ongoing',u_lbl_p:'Urgent',
+dm_t:'Support AppPray ❤️',dl_co:'A coffee',dl_me:'A meal',dl_su:'Support',dl_pa:'Partner',dl_vi:'Vision',dl_fr:'Custom',
+don_tr:'Every donation is used for AppPray\'s development, hosting and global deployment. 100% transparent.',
+don_conf:'{amt}€ donation confirmed — thank you! ❤️',
+em_t:'Edit profile',em_nm:'Display name',em_bi:'Bio',em_lo:'Location',em_ch:'Church / Community',em_li:'Link',
+em_hint:'Leave empty if you are not part of a church',em_sb:'Save',saved:'Profile updated ✓',
+pro_langs:'French · English · Creole',tl_t:'Spiritual timeline',testi_l:'Testimony',
+cb_t:'Create a new group',cb_d:'Family, cell group, church, missionary network.'}
+};
+function t(k){return TR[lang][k]||k;}
+function fmtN(n){return n>=1000?(n/1000).toFixed(1).replace('.0','')+'k':n;}
+function setTxt(id,v){var el=document.getElementById(id);if(el&&v!==undefined)el.textContent=v;}
+function openSettings(){
+  var isConn=!!currentUser;
+  var userName=currentProfile?currentProfile.display_name:(currentUser?currentUser.email:'');
+  var userEmail=currentUser?currentUser.email:'';
+  var el=document.createElement('div');
+  el.id='set-m';
+  var lbl_conn=lang==='fr'?'Connecté en tant que':'Signed in as';
+  var lbl_demo=lang==='fr'?'Mode démonstration':'Demo mode';
+  var lbl_lang=lang==='fr'?'Passer en Anglais':'Passer en Français';
+  var lbl_logout=lang==='fr'?'Se déconnecter':'Sign out';
+  var lbl_login=lang==='fr'?'Se connecter':'Sign in';
+  var lbl_settings=lang==='fr'?'Paramètres':'Settings';
+  el.innerHTML=[
+    '<div class="modal-ov" id="set-ov">',
+    '<div class="modal" style="padding-bottom:2rem">',
+    '<div class="modal-handle"></div>',
+    '<div class="modal-head"><div class="modal-title">'+lbl_settings+'</div></div>',
+    '<div class="modal-body">',
+    isConn?(
+      '<div style="padding:0.75rem 0;border-bottom:1px solid var(--border);margin-bottom:0.5rem">'+
+      '<div style="font-family:var(--font-ui);font-size:0.62rem;color:var(--text-muted);margin-bottom:0.2rem">'+lbl_conn+'</div>'+
+      '<div style="font-family:var(--font-ui);font-size:0.78rem;font-weight:500;color:var(--text)">'+userName+'</div>'+
+      '<div style="font-family:var(--font-ui);font-size:0.62rem;color:var(--text-muted)">'+userEmail+'</div></div>'
+    ):(
+      '<div style="font-family:var(--font-ui);font-size:0.72rem;color:var(--text-muted);padding:0.75rem 0;border-bottom:1px solid var(--border);margin-bottom:0.5rem">'+lbl_demo+'</div>'
+    ),
+    '<button id="s-lang-btn" class="m-submit" style="background:var(--surface);border:1px solid var(--border);color:var(--text-muted)">'+lbl_lang+'</button>',
+    isConn?'<button id="s-auth-btn" class="m-submit" style="margin-top:0.5rem;background:transparent;border:1px solid var(--border-flame);color:var(--flame)">'+lbl_logout+'</button>':
+           '<button id="s-auth-btn" class="m-submit" style="margin-top:0.5rem">'+lbl_login+'</button>',
+    '</div></div></div>'
+  ].join('');
+  document.getElementById('modals').appendChild(el);
+  document.body.style.overflow='hidden';
+  document.getElementById('set-ov').addEventListener('click',function(e){if(e.target.id==='set-ov'){el.remove();document.body.style.overflow='';}});
+  document.getElementById('s-lang-btn').addEventListener('click',function(){el.remove();document.body.style.overflow='';toggleLang();});
+  document.getElementById('s-auth-btn').addEventListener('click',function(){
+    if(isConn){doLogout();}
+    else{el.remove();document.body.style.overflow='';goPage('login');}
+  });
+}
+async function doLogout(){
+  await supa.auth.signOut();
+  currentUser=null;currentProfile=null;
+  prayedIds.clear();
+  var sm=document.getElementById('set-m');if(sm)sm.remove();
+  document.body.style.overflow='';
+  goPage('splash');
+  showToast('👋',lang==='fr'?'Déconnecté':'Signed out');
+}
+function updateTopbarAvatar(){
+  if(!currentProfile) return;
+  var letter=currentProfile.avatar_letter||'?';
+  document.querySelectorAll('.av-btn,.pub-av,.pav').forEach(function(el){
+    el.textContent=letter;
+  });
+}
+function setHTML(id,v){var el=document.getElementById(id);if(el&&v!==undefined)el.innerHTML=v;}
+
+/* ═══════ NAVIGATION ═══════ */
+function goPage(id){
+  document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active');});
+  var el=document.getElementById('p-'+id);
+  if(el){el.classList.add('active');currentPage=id;onEnter(id);}
+}
+function navTo(id){
+  goPage(id);
+  document.querySelectorAll('.nav-item').forEach(function(n){n.classList.remove('active');});
+  var suffix={feed:'1',explore:'2',groups:'3',profile:'4'};
+  var map={feed:'f',explore:'e',groups:'g',profile:'p'};
+  if(map[id]){
+    for(var i=1;i<=4;i++){
+      var el=document.getElementById('nl-'+map[id]+i);
+      if(el){var ni=el.closest('.nav-item');if(ni)ni.classList.add('active');}
+    }
+  }
+}
+function onEnter(id){
+  if(id==='feed'){
+    renderCatBar();
+    // Charger les vraies prières si connecté
+    loadRealPrayers().then(function(loaded){
+      renderFeed();
+      if(loaded) loadUserSupports().then(function(){renderFeed();});
+    });
+    animateLive();
+    if(currentUser) subscribeToRealtime();
+  }
+  else if(id==='explore'){renderExpTab(activeExpTab);}
+  else if(id==='groups'){renderGrpTab(activeGrpTab);}
+  else if(id==='profile'){
+    renderProTab(activeProTab);
+    // Afficher les vraies infos du profil
+    if(currentProfile){
+      setTxt('pro-name', currentProfile.display_name||'');
+      setTxt('pro-bio', currentProfile.bio||'Membre AppPray');
+      setTxt('pro-church', currentProfile.church||'');
+      if(!currentProfile.church){
+        var cw=document.getElementById('pro-church-wrap');
+        if(cw) cw.style.display='none';
+      }
+    }
+    setTimeout(function(){var pf=document.getElementById('pro-fill');if(pf)pf.style.width='68%';},400);
+  }
+}
+
+/* ═══════ LANGUAGE ═══════ */
+function toggleLang(){
+  lang=lang==='fr'?'en':'fr';
+  var lbl=lang==='fr'?'EN':'FR';
+  ['sl-lang','su-lang','li-lang','fd-lang','ex-lang','gr-lang','pr-lang'].forEach(function(id){setTxt(id,lbl);});
+  applyLang();
+  if(currentPage==='feed'){renderCatBar();renderFeed();}
+  else if(currentPage==='explore')renderExpTab(activeExpTab);
+  else if(currentPage==='groups')renderGrpTab(activeGrpTab);
+  else if(currentPage==='profile')renderProTab(activeProTab);
+}
+function applyLang(){
+  setTxt('sp-tag',t('tag'));setTxt('sp-verse',t('verse'));setTxt('sp-start',t('start'));setTxt('sp-login',t('have_acc'));
+  setTxt('su-step',t('su_step'));setHTML('su-title',t('su_title').replace('\n','<br>'));setTxt('su-sub',t('su_sub'));
+  setTxt('su-or',t('su_or'));setTxt('su-g',t('google'));setTxt('su-fb',t('fb'));setTxt('su-wa',t('wa'));
+  setHTML('terms-txt',t('terms'));setTxt('su-cta',t('su_cta'));setTxt('su-sw1',t('su_sw1'));setTxt('su-sw2',t('su_sw2'));
+  setTxt('co-ph',t('co_ph'));setTxt('co-other',t('co_other'));
+  setHTML('li-title',t('li_title').replace('\n','<br>'));setTxt('li-sub',t('li_sub'));
+  setTxt('li-g',t('google'));setTxt('li-fb',t('fb'));setTxt('li-wa',t('wa'));
+  setTxt('li-cta',t('li_cta'));setTxt('li-or',lang==='fr'?'ou':'or');setTxt('li-sw1',t('li_sw1'));setTxt('li-sw2',t('li_sw2'));
+  setTxt('ve-step',t('ve_step'));setHTML('ve-title',t('ve_title').replace('\n','<br>'));setTxt('ve-sub',t('ve_sub'));setTxt('ve-resend',t('ve_resend'));setTxt('ve-cta',t('ve_cta'));
+  setTxt('ob1-body',t('ob1'));setTxt('ob2-body',t('ob2'));setTxt('ob3-body',t('ob3'));setTxt('ob4-body',t('ob4'));
+  setTxt('ob-live',t('ob_live'));setTxt('ob-ans',t('ob_ans'));setTxt('ob2-tl',t('ob_tl'));
+  setTxt('ob-next',t('ob_next')[obStep-1]);setTxt('ob-skip',t('ob_skip'));
+  setTxt('vl-w',t('vl_w'));setTxt('vl-g',t('vl_g'));setTxt('vl-p',t('vl_p'));setTxt('vl-a',t('vl_a'));
+  var fpta=document.getElementById('fp-ta');if(fpta)fpta.placeholder=t('fp_ph');
+  setTxt('ub-txt',t('ub'));setTxt('pub-ph',t('pub_ph'));setTxt('feed-ttl',t('feed_ttl'));setTxt('live-lbl',t('praying'));setTxt('ptr-txt',t('ptr'));
+  setTxt('etm',t('tab_m'));setTxt('ett',t('tab_t'));setTxt('etc',t('tab_c'));setTxt('ette',t('tab_te'));
+  var si=document.getElementById('s-inp');if(si)si.placeholder=t('s_ph');
+  setHTML('plan-txt',t('plan_txt'));setTxt('plan-up',lang==='fr'?'Évoluer':'Upgrade');setTxt('grp-create-btn',t('create_grp'));
+  setTxt('gtm',t('grp_mine'));setTxt('gte',t('grp_exp'));
+  var gti=document.getElementById('gti');if(gti)gti.innerHTML=t('grp_inv')+(invitCount>0?' <span class="tab-badge" id="inv-badge">'+invitCount+'</span>':'');
+  setTxt('pro-since',t('pro_since')+' Juin 2025');setTxt('pro-langs',t('pro_langs'));
+  setTxt('pro-edit-btn',t('pro_edit'));setTxt('cover-edit',t('cover_edit'));
+  setTxt('sl-pr',t('sl_pr'));setTxt('sl-pp',t('sl_pp'));setTxt('sl-an',t('sl_an'));setTxt('sl-gr',t('sl_gr'));
+  setTxt('imp-lbl',t('imp_l'));setTxt('imp-lvl',t('imp_lv'));setTxt('imp-name',t('imp_n'));
+  setTxt('pb1t',t('pb1'));setTxt('pb2t',t('pb2'));setTxt('pb3t',t('pb3'));setTxt('pb4t',t('pb4'));setTxt('pb5t',t('pb5'));
+  setTxt('don-ttl',t('don_t'));setTxt('don-sb',t('don_s'));setTxt('don-cta',t('don_cta'));
+  setTxt('pt-pr',t('pt_pr'));setTxt('pt-te',t('pt_te'));setTxt('pt-jo',t('pt_jo'));
+  ['feed','explore','groups','profile'].forEach(function(pg,i){
+    var keys=['f','e','g','p'];
+    for(var n=1;n<=4;n++){setTxt('nl-'+keys[i]+n,t(['feed','explore','groups','profile'][i]));}
+  });
+}
+
+/* ═══════ AUTH ═══════ */
+function toggleTerms(){termsOk=!termsOk;document.getElementById('terms-box').classList.toggle('checked',termsOk);checkSU();}
+function checkSU(){
+  var fn=document.getElementById('su-fn').value.trim().length>=2;
+  var ln=document.getElementById('su-ln').value.trim().length>=2;
+  var em=/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(document.getElementById('su-em').value);
+  var pw=document.getElementById('su-pw').value.length>=8;
+  var co=document.getElementById('su-co').value!=='';
+  document.getElementById('su-btn').disabled=!(fn&&ln&&em&&pw&&co&&termsOk);
+}
+function checkPW(){
+  var pw=document.getElementById('su-pw').value;
+  var bars=[document.getElementById('pb1'),document.getElementById('pb2'),document.getElementById('pb3'),document.getElementById('pb4')];
+  bars.forEach(function(b){b.className='pw-bar';});
+  var s=0;if(pw.length>=8)s++;if(/[A-Z]/.test(pw))s++;if(/[0-9]/.test(pw))s++;if(/[^A-Za-z0-9]/.test(pw))s++;
+  var cls=['','weak','weak','medium','strong'];
+  for(var i=0;i<s;i++)bars[i].classList.add(cls[s]);
+}
+function checkLI(){
+  var em=/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(document.getElementById('li-em').value);
+  var pw=document.getElementById('li-pw').value.length>=6;
+  document.getElementById('li-btn').disabled=!(em&&pw);
+}
+async function doSignup(){
+  var btn=document.getElementById('su-btn');
+  btn.textContent='...';btn.disabled=true;
+  var email=document.getElementById('su-em').value.trim();
+  var password=document.getElementById('su-pw').value;
+  var fname=document.getElementById('su-fn').value.trim();
+  var lname=document.getElementById('su-ln').value.trim();
+  var displayName=fname+' '+lname;
+  try {
+    var res=await supa.auth.signUp({
+      email:email,
+      password:password,
+      options:{ data:{ display_name:displayName, lang:lang } }
+    });
+    if(res.error) throw res.error;
+    currentUser=res.data.user;
+    // Créer le profil si pas créé par le trigger
+    console.log('submitPrayer - currentUser:', currentUser ? currentUser.id : 'NULL');
+  if(currentUser){
+      await supa.from('profiles').upsert({
+        id:currentUser.id,
+        display_name:displayName,
+        handle:fname.toLowerCase().replace(/[^a-z0-9]/g,'')+'.'+lname.toLowerCase().replace(/[^a-z0-9]/g,''),
+        avatar_letter:fname.charAt(0).toUpperCase(),
+        avatar_color:'#C8102E',
+        lang:lang,
+        country:document.getElementById('su-co').value||''
+      });
+      currentProfile={display_name:displayName,avatar_letter:fname.charAt(0).toUpperCase(),avatar_color:'#C8102E'};
+    }
+    btn.innerHTML='<span id="su-cta">'+t('su_cta')+'</span>';
+    goPage('onboard');obStep=1;updateOb();
+    showToast('🙏',lang==='fr'?'Bienvenue dans AppPray !':'Welcome to AppPray!');
+  } catch(err){
+    btn.innerHTML='<span id="su-cta">'+t('su_cta')+'</span>';
+    btn.disabled=false;
+    var msg=err.message||'Erreur';
+    if(msg.includes('already registered')) msg=lang==='fr'?'Cet email est déjà utilisé.':'This email is already registered.';
+    showToast('⚠️',msg);
+  }
+}
+async function doLogin(){
+  var email=document.getElementById('li-em').value.trim();
+  var password=document.getElementById('li-pw').value;
+  var btn=document.getElementById('li-btn');
+  btn.disabled=true;btn.innerHTML='<span class="ptr-spin"></span>';
+  try {
+    var res=await supa.auth.signInWithPassword({email:email,password:password});
+    if(res.error) throw res.error;
+    currentUser=res.data.user;
+    await loadProfile();
+    btn.disabled=false;btn.innerHTML='<span id="li-cta">'+t('li_cta')+'</span>';
+    showToast('🙏',t('login_ok'));
+    setTimeout(function(){navTo('feed');},600);
+  } catch(err){
+    btn.disabled=false;btn.innerHTML='<span id="li-cta">'+t('li_cta')+'</span>';
+    var msg=err.message||'Erreur';
+    if(msg.includes('Invalid login')) msg=lang==='fr'?'Email ou mot de passe incorrect.':'Invalid email or password.';
+    showToast('⚠️',msg);
+  }
+}
+function demoLogin(){
+  currentUser=null;currentProfile=null;
+  navTo('feed');
+  showToast('🙏',lang==='fr'?'Mode démonstration — données locales':'Demo mode — local data');
+}
+function otpNext(el,nid){el.value=el.value.replace(/\D/g,'');if(el.value&&nid){var n=document.getElementById(nid);if(n)n.focus();}}
+function otpDone(){var c=['o1','o2','o3','o4','o5','o6'].map(function(id){return document.getElementById(id).value;}).join('');document.getElementById('ve-btn').disabled=c.length<6;}
+
+/* ═══════ ONBOARDING ═══════ */
+function updateOb(){
+  for(var i=1;i<=4;i++){
+    var s=document.getElementById('op'+i);if(!s)continue;
+    s.className='ob-seg'+(i<obStep?' done':i===obStep?' active':'');
+    var st=document.getElementById('obs'+i);if(st){if(i===obStep)st.classList.add('active');else st.classList.remove('active');}
+  }
+  var nb=document.getElementById('ob-next');var sk=document.getElementById('ob-skip');
+  if(nb)nb.textContent=t('ob_next')[obStep-1];
+  if(sk)sk.style.display=obStep===4?'none':'block';
+  if(obStep===4&&nb)nb.disabled=!fpOk; else if(nb)nb.disabled=false;
+}
+function nextOb(){
+  if(obStep===4){showToast('🙏',lang==='fr'?'Prière publiée — bienvenue !':'Prayer published — welcome!');setTimeout(function(){navTo('feed');},700);return;}
+  obStep++;updateOb();
+}
+function skipOb(){if(obStep===4){navTo('feed');return;}obStep++;updateOb();}
+function selTime(el){document.querySelectorAll('.time-opt').forEach(function(o){o.classList.remove('active');});el.classList.add('active');}
+function selVis(el){document.querySelectorAll('.vis-opt').forEach(function(v){v.classList.remove('active');});el.classList.add('active');}
+function checkFP(){var v=document.getElementById('fp-ta').value;document.getElementById('fp-cnt').textContent=v.length;fpOk=v.trim().length>=5;updateOb();}
+
+/* ═══════ FEED DATA ═══════ */
+var PRAYERS=[
+  {id:1,user:'Marie-Claire K.',anon:false,flag:'🇨🇩',loc:'Kinshasa',av:'M',col:'#B91C1C',time:{fr:'il y a 12 min',en:'12 min ago'},
+   title:{fr:'Mon fils hospitalisé — priez avec moi',en:'My son hospitalized — please pray with me'},
+   body:{fr:'Mon fils de 8 ans est à l\'hôpital depuis hier soir avec une forte fièvre. Les médecins cherchent encore le diagnostic. Je demande à toute la communauté de se joindre à moi dans cette prière urgente.',en:'My 8-year-old son has been in hospital since last night. Doctors are still searching for a diagnosis. I ask the whole community to join me in this urgent prayer.'},
+   count:382,cat:'health',status:'urgent',replies:14,vocal:false,online:true,update:null},
+  {id:2,user:'Pastor Emmanuel N.',anon:false,flag:'🇳🇬',loc:'Lagos',av:'P',col:'#1D4ED8',time:{fr:'il y a 2h',en:'2h ago'},
+   title:{fr:'Témoignage — Dieu a répondu !',en:'Testimony — God answered!'},
+   body:{fr:'Il y a 3 semaines, je vous demandais de prier pour mon opération cardiaque. Aujourd\'hui je témoigne que Dieu est fidèle. Les médecins sont surpris par ma récupération. Gloire à Dieu !',en:'3 weeks ago I asked you to pray for my heart surgery. Today I testify God is faithful. The doctors are surprised by my recovery. Glory to God!'},
+   count:1247,cat:'health',status:'answered',replies:89,vocal:false,online:false,update:{fr:'✨ Opération réussie — rentré à la maison ce matin. Merci à tous !',en:'✨ Surgery successful — home this morning. Thank you all!'}},
+  {id:3,user:null,anon:true,flag:'🇮🇳',loc:'Chennai',av:'?',col:'#374151',time:{fr:'il y a 5h',en:'5h ago'},
+   title:{fr:'Danger — priez pour notre protection',en:'Danger — pray for our protection'},
+   body:{fr:'Notre équipe est dans une situation difficile. Je ne peux pas donner de détails mais nous avons besoin de prière urgente. Dieu sait tout.',en:'Our team is in a difficult situation. I cannot give details but we urgently need prayer. God knows everything.'},
+   count:847,cat:'mission',status:'urgent',replies:31,vocal:false,online:true,update:null},
+  {id:4,user:'Amara D.',anon:false,flag:'🇸🇳',loc:'Dakar',av:'A',col:'#7C3AED',time:{fr:'il y a 8h',en:'8h ago'},
+   title:{fr:'4 mois sans emploi — Dieu pourvois',en:'4 months unemployed — Lord provide'},
+   body:{fr:'Cela fait 4 mois que je cherche un emploi avec une famille à charge. Aujourd\'hui je pose tout aux pieds du Seigneur.',en:'I\'ve been job-hunting for 4 months with a family to support. Today I lay everything at the Lord\'s feet.'},
+   count:214,cat:'finance',status:'ongoing',replies:22,vocal:false,online:false,update:null},
+  {id:5,user:'Sœur Lydia M.',anon:false,flag:'🇧🇷',loc:'São Paulo',av:'L',col:'#065F46',time:{fr:'il y a 11h',en:'11h ago'},
+   title:{fr:'Message vocal de prière pour les familles brisées',en:'Voice prayer for broken families'},
+   body:{fr:'Je prie chaque jour pour les familles en souffrance. Voici mon message du cœur pour vous accompagner.',en:'I pray every day for suffering families. Here is my heartfelt message to accompany you.'},
+   count:563,cat:'family',status:'ongoing',replies:47,vocal:true,online:true,update:null},
+  {id:6,user:'Jean-Baptiste T.',anon:false,flag:'🇫🇷',loc:'Marseille',av:'J',col:'#92400E',time:{fr:'il y a 1j',en:'1d ago'},
+   title:{fr:'Réconciliation avec ma sœur après 10 ans',en:'Reconciliation with my sister after 10 years'},
+   body:{fr:'Ma sœur et moi ne nous parlons plus depuis 10 ans. J\'ai senti l\'appel à rétablir ce lien. Je lui ai écrit la semaine dernière.',en:'My sister and I haven\'t spoken for 10 years. I felt the call to restore that bond. I wrote to her last week.'},
+   count:97,cat:'family',status:'ongoing',replies:8,vocal:false,online:false,update:null}
+];
+var CK=['all','health','family','couple','work','finance','studies','projects','mission','faith','urgent','other'];
+var CF={fr:['Tous','🏥 Santé','👨‍👩‍👧 Famille','💑 Couple','💼 Travail','💰 Finances','📚 Études','🎯 Projets','🌍 Mission','✝️ Foi','🚨 Urgence','✳️ Autres'],en:['All','🏥 Health','👨‍👩‍👧 Family','💑 Couple','💼 Work','💰 Finances','📚 Studies','🎯 Projects','🌍 Mission','✝️ Faith','🚨 Urgent','✳️ Other']};
+var CM={fr:['🏥 Santé','👨‍👩‍👧 Famille','💑 Couple','💼 Travail','💰 Finances','📚 Études','🎯 Projets','🌍 Mission','✝️ Foi','🚨 Urgence','✳️ Autres'],en:['🏥 Health','👨‍👩‍👧 Family','💑 Couple','💼 Work','💰 Finances','📚 Studies','🎯 Projects','🌍 Mission','✝️ Faith','🚨 Urgent','✳️ Other']};
+
+function renderCatBar(){
+  var cats=CF[lang];
+  document.getElementById('cat-bar').innerHTML=cats.map(function(c,i){
+    return '<button class="cat-pill'+(activeCat===CK[i]?' active':'')+'" onclick="setCat(\''+CK[i]+'\')">'+c+'</button>';
+  }).join('');
+}
+function setCat(c){activeCat=c;renderCatBar();renderFeed();}
+function filteredPrayers(){
+  if(activeCat==='all')return PRAYERS;
+  return PRAYERS.filter(function(p){if(activeCat==='urgent')return p.status==='urgent';return p.cat===activeCat;});
+}
+
+/* ═══════ PRAYER CARD ═══════ */
+function renderFeed(){
+  var cards=document.getElementById('feed-cards');
+  var fps=filteredPrayers();
+  if(!fps.length){cards.innerHTML='<div style="padding:3rem 1rem;text-align:center;color:var(--text-muted)"><div style="font-size:2rem;margin-bottom:0.7rem;opacity:0.4">🙏</div><div style="font-family:var(--font-display);font-style:italic;font-size:1rem;line-height:1.6">'+(lang==='fr'?'Aucune prière dans cette catégorie.':'No prayers in this category yet.')+'</div></div>';return;}
+  cards.innerHTML=fps.map(cardHTML).join('');
+}
+function cardHTML(p){
+  var hp=prayedIds.has(p.id),cnt=hp?p.count+1:p.count,isExp=expandedIds.has(p.id);
+  var d={title:p.title[lang]||p.title.fr,body:p.body[lang]||p.body.fr,time:p.time[lang]||p.time.fr,upd:p.update?(p.update[lang]||p.update.fr):null};
+  var cls='prayer-card'+(p.status==='urgent'?' urgent':p.status==='answered'?' answered':'');
+  var bcls={urgent:'sbadge sb-u',ongoing:'sbadge sb-o',answered:'sbadge sb-a'}[p.status];
+  var blbl={urgent:t('u_lbl'),ongoing:t('o_lbl'),answered:t('a_lbl')}[p.status];
+  var userName=p.anon?t('anon_u'):p.user;
+  var avStyle=p.anon?'background:var(--surface);border:1px dashed var(--border-hi);color:var(--text-muted)':'background:'+p.col;
+  var avS=['#B91C1C','#1D4ED8','#065F46','#7C3AED'],avL=['J','P','A','L'];
+  return '<div class="'+cls+'" id="fc-'+p.id+'">'+
+    '<div class="card-inner">'+
+      '<div class="card-hdr">'+
+        '<div class="uav" style="'+avStyle+'">'+(p.anon?'?':p.av)+(p.online&&!p.anon?'<div class="av-on"></div>':'')+
+        '</div>'+
+        '<div style="flex:1;min-width:0"><div class="uname">'+userName+'</div>'+
+          '<div class="umeta"><span class="uflag">'+p.flag+'</span><span class="uloc">'+p.loc+'</span><span class="utime">'+d.time+'</span></div>'+
+        '</div>'+
+        '<span class="'+bcls+'"><span class="sdot"></span>'+blbl+'</span>'+
+      '</div>'+
+      (p.status==='answered'?'<div class="celeb-wrap"><span style="font-size:1.3rem">✨</span><div><div class="celeb-txt">'+t('celeb_t')+'</div><div class="celeb-cnt">'+fmtN(cnt)+' '+t('celeb_s')+'</div></div></div>':'')+
+      (d.upd?'<div class="upd-tag"><span style="font-size:0.85rem;flex-shrink:0;margin-top:1px">📢</span><span class="upd-txt">'+d.upd+'</span></div>':'')+
+      (p.vocal?'<div class="vocal-tag"><div class="vbars"><div class="vbar"></div><div class="vbar"></div><div class="vbar"></div><div class="vbar"></div></div>'+(lang==='fr'?'Message vocal':'Voice message')+'</div>':'')+
+      '<div class="card-title">'+d.title+'</div>'+
+      '<div class="card-body'+(isExp?'':' cl')+'">'+d.body+'</div>'+
+      '<button class="rm-btn" onclick="toggleExp('+p.id+')">'+(isExp?t('collapse'):t('read_more'))+'</button>'+
+      '<div class="pctr">'+
+        '<div class="av-stack">'+avS.map(function(c,i){return '<div class="sav" style="background:'+c+'">'+avL[i]+'</div>';}).join('')+'</div>'+
+        '<span class="ctxt"><strong>'+fmtN(cnt)+'</strong> '+(p.status==='answered'?t('have_prayed'):t('praying'))+'</span>'+
+      '</div>'+
+    '</div>'+
+    '<div class="card-acts">'+
+      '<button class="act-btn act-pray'+(hp?' praying':'')+'" onclick="togglePray(event,'+p.id+')" style="position:relative">'+
+        '<span class="ai">🙏</span><span class="ac">'+fmtN(cnt)+'</span><span class="al">'+(hp?t('prayed'):t('pray'))+'</span>'+
+      '</button>'+
+      '<div class="act-sep"></div>'+
+      '<button class="act-btn" onclick="showToast(\'💬\',t(\'soon\'))"><span class="ai">💬</span><span class="ac">'+p.replies+'</span><span class="al">'+t('replies')+'</span></button>'+
+      '<div class="act-sep"></div>'+
+      '<button class="act-btn" onclick="showToast(\'🔗\',t(\'shared\'))"><span class="ai">↗️</span><span class="al">'+t('share')+'</span></button>'+
+    '</div>'+
+  '</div>';
+}
+function toggleExp(id){if(expandedIds.has(id))expandedIds.delete(id);else expandedIds.add(id);renderFeed();}
+function togglePray(e,id){
+  var was=prayedIds.has(id);
+  if(was){
+    prayedIds.delete(id);
+    showToast('🙏',t('pray_removed'));
+    if(currentUser) togglePraySupport(id,false);
+  } else {
+    prayedIds.add(id);
+    showToast('🙏',t('pray_added'));
+    spawnParticles(e);
+    if(currentUser) togglePraySupport(id,true);
+    var p=PRAYERS.find(function(x){return x.id===id;});
+    if(p&&p.status==='answered') spawnConfetti();
+  }
+  // Mettre à jour le compteur local
+  var p=PRAYERS.find(function(x){return x.id===id;});
+  if(p) p.count=was?Math.max(0,p.count-1):p.count+1;
+  renderFeed();
+}
+function closeUB(){
+  var el=document.getElementById('ub');if(!el)return;
+  el.style.transition='height 0.3s,opacity 0.3s,padding 0.3s';el.style.height=el.offsetHeight+'px';
+  requestAnimationFrame(function(){el.style.height='0';el.style.opacity='0';el.style.padding='0';setTimeout(function(){el.style.display='none';},300);});
+}
+function animateLive(){
+  var el=document.getElementById('live-num');if(!el)return;
+  var base=2847;
+  var timer=setInterval(function(){if(!document.getElementById('live-num')){clearInterval(timer);return;}base=Math.max(2800,base+Math.floor(Math.random()*6)-2);el.textContent=base.toString().replace(/\B(?=(\d{3})+(?!\d))/g,' ');},4000);
+}
+function liveMsg(){return fmtN(2847)+' '+t('live_s');}
+
+/* ═══════ PUBLISH MODAL ═══════ */
+function openPubM(){
+  var cats=CM[lang];
+  var html='<div class="modal-ov" onclick="closeMod(event,\'pub-m\')">'+
+    '<div class="modal" onclick="event.stopPropagation()">'+
+      '<div class="modal-handle"></div>'+
+      '<div class="modal-head"><div class="modal-title">'+t('new_prayer')+'</div><div class="modal-sub">'+t('pub_sub')+'</div></div>'+
+      '<div class="modal-body">'+
+        '<div class="m-field"><label class="m-lbl">'+t('ml_ttl')+'</label><input class="m-inp" id="pm-ttl" type="text" maxlength="80" oninput="checkPM()" placeholder="'+(lang==='fr'?'Ex: Guérison de mon père...':'E.g: Healing for my father...')+'"/><div class="char-hint" id="pm-ch">0 / 80</div></div>'+
+        '<div class="m-field"><label class="m-lbl">'+t('ml_body')+'</label><textarea class="m-ta" id="pm-body" rows="3" placeholder="'+(lang==='fr'?'Partagez votre sujet de prière...':'Share your prayer request...')+'"></textarea></div>'+
+        '<div class="m-field"><label class="m-lbl">'+t('ml_cat')+'</label><div class="m-cats">'+cats.map(function(c,i){return '<div class="m-cat'+(i===modalCat?' active':'')+'" onclick="setMCat('+i+')">'+c+'</div>';}).join('')+'</div></div>'+
+        '<div class="m-field"><label class="m-lbl">'+t('ml_vis')+'</label><div class="m-opts"><div class="m-opt active" onclick="selMVis(this)"><span class="oi">🌍</span><span class="ol">'+t('ml_w')+'</span></div><div class="m-opt" onclick="selMVis(this)"><span class="oi">👥</span><span class="ol">'+t('ml_g')+'</span></div><div class="m-opt" onclick="selMVis(this)"><span class="oi">🔒</span><span class="ol">'+t('ml_p')+'</span></div></div></div>'+
+        '<div class="anon-tog" id="anon-tog" onclick="toggleAnon()"><div class="tog-track"><div class="tog-thumb"></div></div><div class="tog-info"><div class="tog-title">'+t('ml_at')+'</div><div class="tog-sub">'+t('ml_as')+'</div></div><span style="font-size:0.8rem;color:var(--text-muted)">👤</span></div>'+
+        '<div class="m-field" style="display:flex;gap:0.5rem"><div class="pub-icon-btn" style="width:auto;flex:1;gap:0.5rem;font-size:0.62rem;letter-spacing:0.08em;font-family:var(--font-ui);color:var(--text-dim);padding:0 0.7rem;height:36px" onclick="showToast(\'🎤\',t(\'mic\'))">🎤 '+t('ml_voc')+'</div><div class="pub-icon-btn" style="width:auto;flex:1;gap:0.5rem;font-size:0.62rem;letter-spacing:0.08em;font-family:var(--font-ui);color:var(--text-dim);padding:0 0.7rem;height:36px" onclick="showToast(\'📷\',t(\'photo\'))">📷 '+t('ml_photo')+'</div></div>'+
+        '<button class="m-submit" id="pm-sub" disabled onclick="submitPrayer()">'+t('ml_sub')+'</button>'+
+      '</div>'+
+    '</div>'+
+  '</div>';
+  var wrap=document.getElementById('modals');wrap.innerHTML='<div id="pub-m">'+html+'</div>';
+  document.body.style.overflow='hidden';
+  if(anonOn){setTimeout(function(){var at=document.getElementById('anon-tog');if(at)at.classList.add('on');},50);}
+}
+function closeMod(e,id){if(e&&!e.target.classList.contains('modal-ov'))return;var el=document.getElementById(id);if(el)el.remove();document.body.style.overflow='';}
+function setMCat(i){modalCat=i;document.querySelectorAll('.m-cat').forEach(function(c,idx){c.classList.toggle('active',idx===i);});}
+function selMVis(el){document.querySelectorAll('.m-opt').forEach(function(o){o.classList.remove('active');});el.classList.add('active');}
+function toggleAnon(){anonOn=!anonOn;var at=document.getElementById('anon-tog');if(at)at.classList.toggle('on',anonOn);}
+function checkPM(){var v=document.getElementById('pm-ttl').value;document.getElementById('pm-ch').textContent=v.length+' / 80';document.getElementById('pm-sub').disabled=v.trim().length<3;}
+async function submitPrayer(){
+  var title=document.getElementById('pm-ttl').value.trim();
+  var body=document.getElementById('pm-body').value.trim();
+  if(!title)return;
+  var btn=document.getElementById('pm-sub');
+  btn.disabled=true;btn.textContent='...';
+  // Si connecté -> sauvegarder dans Supabase
+  if(currentUser){
+    try{
+      var cats=CM[lang];
+      var catKey=CK[modalCat+1]||'other';
+      var insData={
+        user_id:currentUser.id,
+        title:title,
+        body:body||'',
+        category:catKey,
+        status:'ongoing',
+        visibility:'world',
+        is_anonymous:anonOn,
+        country:currentProfile?currentProfile.country||'':'',
+        support_count:0
+      };
+      var res=await supa.from('prayers').insert(insData).select().single();
+      if(res.error)throw res.error;
+      // Ajouter au feed local
+      var np=res.data;
+      PRAYERS.unshift({
+        id:np.id,
+        user:anonOn?t('anon_u'):(currentProfile?currentProfile.display_name:'Moi'),
+        anon:anonOn,
+        flag:'🌍',loc:np.country||'',
+        av:anonOn?'?':(currentProfile?currentProfile.avatar_letter:'?'),
+        col:anonOn?'#374151':(currentProfile?currentProfile.avatar_color:'#C8102E'),
+        time:{fr:"à l'instant",en:'just now'},
+        title:{fr:title,en:title},
+        body:{fr:body||'',en:body||''},
+        count:0,cat:catKey,status:'ongoing',replies:0,vocal:false,online:true,update:null,
+        _real:true
+      });
+    }catch(err){
+      console.error('Erreur publication:',err);
+      showToast('⚠️',lang==='fr'?'Erreur de publication':'Publication error');
+      btn.disabled=false;btn.textContent=t('ml_sub');
+      return;
+    }
+  } else {
+    // Mode démo : local uniquement
+    PRAYERS.unshift({id:Date.now(),user:anonOn?t('anon_u'):'Moi',anon:anonOn,flag:'🌍',loc:'',av:anonOn?'?':'M',col:anonOn?'#374151':'#C8102E',time:{fr:"à l'instant",en:'just now'},title:{fr:title,en:title},body:{fr:body||'',en:body||''},count:0,cat:'other',status:'ongoing',replies:0,vocal:false,online:true,update:null});
+  }
+  activeCat='all';
+  var pw=document.getElementById('pub-m');if(pw)pw.remove();
+  document.body.style.overflow='';
+  renderCatBar();renderFeed();
+  showToast('🙏',t('published'));
+  spawnConfettiGold();
+}
+/* PTR */
+var ptrStart=0,ptrActive=false;
+function initPTR(){
+  var fs=document.getElementById('feed-scroll');if(!fs)return;
+  fs.addEventListener('touchstart',function(e){if(fs.scrollTop===0)ptrStart=e.touches[0].clientY;},{passive:true});
+  fs.addEventListener('touchmove',function(e){if(ptrStart&&e.touches[0].clientY-ptrStart>60&&fs.scrollTop===0){ptrActive=true;var p=document.getElementById('ptr');if(p)p.classList.add('on');}},{passive:true});
+  fs.addEventListener('touchend',function(){if(ptrActive){ptrActive=false;setTimeout(function(){var p=document.getElementById('ptr');if(p)p.classList.remove('on');renderFeed();showToast('✓',lang==='fr'?'Feed actualisé':'Feed refreshed');},800);}ptrStart=0;});
+}
+
+/* ═══════ EXPLORER ═══════ */
+var COUNTRIES=[{flag:'🇫🇷',name:'France',count:'1.2k',pct:38},{flag:'🇳🇬',name:'Nigeria',count:'8.4k',pct:85},{flag:'🇧🇷',name:'Brasil',count:'12k',pct:100},{flag:'🇮🇳',name:'India',count:'4.7k',pct:62},{flag:'🇨🇩',name:'Congo',count:'2.1k',pct:45},{flag:'🇺🇸',name:'USA',count:'15k',pct:95},{flag:'🇷🇪',name:'Réunion',count:'247',pct:22},{flag:'🇨🇲',name:'Cameroun',count:'890',pct:30},{flag:'🇿🇦',name:'S.Africa',count:'3.2k',pct:55}];
+var TRENDING=[{rank:1,cat:{fr:'Santé',en:'Health'},title:{fr:'Pour les malades du monde entier',en:'For the sick around the world'},count:'34.2k',arr:'↑',flags:['🇳🇬','🇧🇷','🇺🇸']},{rank:2,cat:{fr:'Urgence',en:'Urgent'},title:{fr:'Situation en zone de conflit — Prions pour la paix',en:'Situation in conflict zone — Pray for peace'},count:'18.7k',arr:'↑↑',flags:['🇫🇷','🇨🇩','🇮🇳']},{rank:3,cat:{fr:'Mission',en:'Mission'},title:{fr:'Intercesseurs pour Chennai — Novembre 2026',en:'Intercessors for Chennai — November 2026'},count:'12.1k',arr:'↑',flags:['🇮🇳','🇷🇪','🇿🇦']},{rank:4,cat:{fr:'Famille',en:'Family'},title:{fr:'Les familles brisées — restauration et amour',en:'Broken families — restoration and love'},count:'9.8k',arr:'→',flags:['🇺🇸','🇧🇷','🇫🇷']},{rank:5,cat:{fr:'Finances',en:'Finances'},title:{fr:'Provision divine pour les familles dans le besoin',en:'Divine provision for families in need'},count:'7.4k',arr:'↑',flags:['🇨🇲','🇨🇩','🇸🇳']}];
+var CHALS=[{id:1,title:{fr:'30 jours de prière pour l\'Afrique',en:'30 days of prayer for Africa'},desc:{fr:'Priez chaque jour pour un pays africain différent. Rejoignez des milliers d\'intercesseurs.',en:'Pray each day for a different African country. Join thousands of intercessors.'},pct:68,target:'10 000',curr:'6 847',days:12},{id:2,title:{fr:'Mission Chennai — Novembre 2026',en:'Chennai Mission — November 2026'},desc:{fr:'21 jours de préparation spirituelle pour la conférence GGMM.',en:'21 days of spiritual preparation for the GGMM conference.'},pct:34,target:'5 000',curr:'1 720',days:21},{id:3,title:{fr:'7 jours pour les persécutés',en:'7 days for the persecuted'},desc:{fr:'Une semaine d\'intercession intensive pour nos frères et sœurs qui souffrent.',en:'A week of intensive intercession for our brothers and sisters who suffer.'},pct:89,target:'8 000',curr:'7 123',days:3}];
+var TESTIS_EXP=[{av:'P',col:'#1D4ED8',name:'Pastor Emmanuel N.',flag:'🇳🇬',time:{fr:'il y a 2j',en:'2d ago'},title:{fr:'Opération cardiaque réussie',en:'Successful heart surgery'},body:{fr:'Il y a 3 semaines, je vous demandais de prier pour mon opération cardiaque. Aujourd\'hui je témoigne que Dieu est fidèle. Gloire à Dieu !',en:'3 weeks ago I asked you to pray for my heart surgery. Today I testify that God is faithful. Glory to God!'},r:[147,203,289]},{av:'M',col:'#065F46',name:'Marie-Claire K.',flag:'🇨🇩',time:{fr:'il y a 4j',en:'4d ago'},title:{fr:'Emploi retrouvé après 6 mois de prière',en:'Job found after 6 months of prayer'},body:{fr:'Six mois de prière, six mois d\'attente, six mois de confiance. Aujourd\'hui je commence un nouveau travail. Merci à tous !',en:'Six months of prayer, waiting, trust. Today I start a new job. Thank you all!'},r:[89,134,201]},{av:'S',col:'#7C3AED',name:'Sœur Adaeze M.',flag:'🇮🇳',time:{fr:'il y a 1 sem.',en:'1w ago'},title:{fr:'Notre équipe missionnaire est rentrée saine et sauve',en:'Our missionary team returned safe and sound'},body:{fr:'Après 3 semaines dans une zone à risque, notre équipe est rentrée. La protection de Dieu était réelle.',en:'After 3 weeks in a high-risk area, our team returned. God\'s protection was real.'},r:[212,178,345]}];
+var INTERS=[{av:'H',col:'#B91C1C',nm:'Harry MC',ct:'1.2k',on:true,g:true},{av:'P',col:'#1D4ED8',nm:'Pastor E.',ct:'847',on:true,g:true},{av:'S',col:'#7C3AED',nm:'Sister A.',ct:'634',on:false,g:false},{av:'M',col:'#065F46',nm:'Marie-C.',ct:'521',on:true,g:false},{av:'J',col:'#92400E',nm:'Jean-B.',ct:'312',on:false,g:false},{av:'L',col:'#065F46',nm:'Lydia M.',ct:'298',on:true,g:false}];
+
+function expTab(tab,btn){document.querySelectorAll('#p-explore .tab').forEach(function(t){t.classList.remove('active');});btn.classList.add('active');activeExpTab=tab;renderExpTab(tab);}
+function renderExpTab(tab){var s=document.getElementById('exp-scroll');s.innerHTML='';setTimeout(function(){if(tab==='monde')renderMonde();else if(tab==='trends')renderTrends();else if(tab==='chals')renderChals();else renderTestisExp();},20);}
+
+function renderMonde(){
+  var s=document.getElementById('exp-scroll');
+  s.innerHTML=
+    '<div class="globe-hero"><div class="globe-bg"></div>'+
+      '<div class="globe-title">'+t('glob_t').replace('\n','<br>')+'<br><span style="font-size:1.1rem;color:var(--gold);font-style:italic;font-weight:300">'+t('glob_s')+'</span></div>'+
+      '<div class="globe-sub">'+t('glob_d')+'</div>'+
+      '<div class="globe-stats">'+
+        '<div class="gstat"><span class="gstat-n red" id="live-pr">47.2k</span><span class="gstat-l">'+t('stat_pr')+'</span></div>'+
+        '<div class="gstat"><span class="gstat-n">127</span><span class="gstat-l">'+t('stat_co')+'</span></div>'+
+        '<div class="gstat"><span class="gstat-n gold">2 847</span><span class="gstat-l">'+t('stat_an')+'</span></div>'+
+      '</div>'+
+    '</div>'+
+    '<div class="sec-lbl">'+t('impact')+'</div>'+
+    '<div class="imp-strip">'+
+      '<div class="ic" onclick="showToast(\'🙏\',t(\'soon\'))"><span class="ic-icon">🙏</span><span class="ic-n red">2.1M</span><span class="ic-l">'+t('stat_pr')+' '+(lang==='fr'?'ce mois':'this month')+'</span></div>'+
+      '<div class="ic" onclick="showToast(\'✨\',t(\'soon\'))"><span class="ic-icon">✨</span><span class="ic-n gold">14 820</span><span class="ic-l">'+t('stat_an')+'</span></div>'+
+      '<div class="ic" onclick="showToast(\'👥\',t(\'soon\'))"><span class="ic-icon">👥</span><span class="ic-n">89.4k</span><span class="ic-l">'+t('stat_pe')+'</span></div>'+
+      '<div class="ic" onclick="showToast(\'🌍\',t(\'soon\'))"><span class="ic-icon">🌍</span><span class="ic-n">127</span><span class="ic-l">'+t('stat_co')+'</span></div>'+
+    '</div>'+
+    '<div class="sec-lbl">'+t('ctries')+'</div>'+
+    '<div class="cg">'+COUNTRIES.map(function(c){return '<div class="cc" onclick="showToast(\''+c.flag+'\',t(\'soon\'))"><span class="cc-f">'+c.flag+'</span><span class="cc-n">'+c.name+'</span><span class="cc-c">'+c.count+' '+(lang==='fr'?'prières':'prayers')+'</span><div class="cc-bar"><div class="cc-fill" style="width:0%" data-p="'+c.pct+'"></div></div></div>';}).join('')+'</div>'+
+    '<div class="sec-lbl">'+t('inters')+'</div>'+
+    '<div class="int-row">'+INTERS.map(function(i){return '<div class="int-item" onclick="showToast(\'👤\',t(\'soon\'))"><div class="int-av-w"><div class="int-av'+(i.g?' gb':'')+'" style="background:'+i.col+'">'+i.av+'</div>'+(i.on?'<div class="int-on"></div>':'')+'</div><span class="int-nm">'+i.nm+'</span><span class="int-ct">'+i.ct+' 🙏</span></div>';}).join('')+'</div>'+
+    '<div style="height:0.5rem"></div>';
+  setTimeout(function(){document.querySelectorAll('.cc-fill').forEach(function(el){el.style.width=el.getAttribute('data-p')+'%';});},200);
+  var lp=document.getElementById('live-pr');if(lp){var b=47200;setInterval(function(){if(!document.getElementById('live-pr'))return;b=Math.max(47000,b+Math.floor(Math.random()*10)-4);lp.textContent=(b/1000).toFixed(1)+'k';},3500);}
+}
+
+function renderTrends(){
+  var s=document.getElementById('exp-scroll');
+  s.innerHTML='<div class="sec-hdr"><span class="sec-ttl">'+t('trending')+'</span><span class="sec-cnt">'+(lang==='fr'?'Mis à jour il y a 5 min':'Updated 5 min ago')+'</span></div>'+
+    TRENDING.map(function(p){return '<div class="tr-card" onclick="showToast(\'🔥\',t(\'soon\'))"><div class="tr-rk'+(p.rank<=3?' top':'')+'">'+p.rank+'</div><div class="tr-info"><div class="tr-cat">'+p.cat[lang]+'</div><div class="tr-ttl">'+p.title[lang]+'</div><div class="tr-meta"><span class="tr-cnt">🙏 '+p.count+'</span><span class="tr-arr">'+p.arr+'</span>'+p.flags.join('')+'</div></div></div>';}).join('')+
+    '<div style="height:0.5rem"></div>';
+}
+
+function renderChals(){
+  var s=document.getElementById('exp-scroll');
+  s.innerHTML='<div class="sec-hdr"><span class="sec-ttl">'+t('chals')+'</span><span class="sec-cnt">'+CHALS.length+' '+(lang==='fr'?'actifs':'active')+'</span></div>'+
+    CHALS.map(function(c){var j=joinedChallenges.has(c.id);return '<div class="chal-card"><div class="ch-inner"><div class="ch-badge">🔥 '+t('chal_b')+'</div><div class="ch-ttl">'+c.title[lang]+'</div><div class="ch-desc">'+c.desc[lang]+'</div><div class="ch-ph"><span class="ch-pl">'+(lang==='fr'?'Progression':'Progress')+'</span><span class="ch-pv">'+c.curr+' / '+c.target+'</span></div><div class="ch-track"><div class="ch-fill" style="width:0%" data-p="'+c.pct+'"></div></div><div class="ch-foot"><span class="ch-days">'+c.days+' '+t('days_l')+'</span><button class="ch-join'+(j?' joined':'')+'" onclick="toggleChal('+c.id+')">'+(j?t('joined_c'):t('join_c'))+'</button></div></div></div>';}).join('')+
+    '<div style="height:0.5rem"></div>';
+  setTimeout(function(){document.querySelectorAll('.ch-fill').forEach(function(el){el.style.width=el.getAttribute('data-p')+'%';});},200);
+}
+function toggleChal(id){if(joinedChallenges.has(id))joinedChallenges.delete(id);else{joinedChallenges.add(id);showToast('🔥',t('toast_c'));}renderChals();}
+
+function renderTestisExp(){
+  var s=document.getElementById('exp-scroll');
+  s.innerHTML='<div class="sec-hdr"><span class="sec-ttl">'+t('testis')+'</span></div>'+
+    TESTIS_EXP.map(function(te){
+      return '<div class="te-card"><div class="te-hdr"><div class="te-av" style="background:'+te.col+'">'+te.av+'</div><div style="flex:1"><div class="te-nm">'+te.name+'</div><div class="te-mt"><span style="font-size:0.8rem">'+te.flag+'</span><span style="font-family:var(--font-ui);font-size:0.55rem;color:var(--text-muted)">'+te.time[lang]+'</span></div></div><span class="te-badge">✨ '+t('ans_b')+'</span></div><div class="te-ttl">'+te.title[lang]+'</div><div class="te-body">'+te.body[lang]+'</div><div class="te-reacts">'+[['🙌',te.r[0]],['❤️',te.r[1]],['🙏',te.r[2]]].map(function(r){return '<button class="te-r" onclick="this.style.color=\'var(--gold)\';showToast(\'🙏\',t(\'toast_te\'))">'+r[0]+' <span>'+r[1]+'</span></button>';}).join('')+'</div></div>';
+    }).join('')+
+    '<div style="height:0.5rem"></div>';
+}
+function handleSearch(el){var v=el.value;document.getElementById('s-clr').classList.toggle('on',v.length>0);if(v.length>1)showToast('🔍',lang==='fr'?'Recherche en cours...':'Searching...');}
+function clearSearch(){document.getElementById('s-inp').value='';document.getElementById('s-clr').classList.remove('on');}
+
+/* ═══════ GROUPES DATA ═══════ */
+var MY_GROUPS=[
+  {id:1,emoji:'🇷🇪',name:'AppPray Réunion',type:'prayer',members:7,prayers:34,admin:true,desc:{fr:'Groupe de prière interculturel pour l\'île de La Réunion.',en:'Intercultural prayer group for La Réunion island.'},avC:['#B91C1C','#1D4ED8','#065F46','#7C3AED'],avL:['H','P','M','J'],moreAv:3},
+  {id:2,emoji:'🌍',name:'Intercesseurs GGMM',type:'mission',members:8,prayers:127,admin:false,desc:{fr:'Réseau d\'intercession pour la mission mondiale.',en:'International intercession network for global mission.'},avC:['#065F46','#B91C1C','#7C3AED'],avL:['S','A','D'],moreAv:5},
+  {id:3,emoji:'🏠',name:'Famille en Prière',type:'family',members:4,prayers:18,admin:true,desc:{fr:'Groupe privé de prière familiale au quotidien.',en:'Private daily family prayer group.'},avC:['#B91C1C','#92400E','#065F46','#7C3AED'],avL:['H','L','E','N'],moreAv:0},
+];
+var EXP_GROUPS=[
+  {id:4,emoji:'✊',name:'Réveil Afrique',type:'intercess',members:847,prayers:4200,admin:false,desc:{fr:'Mouvement mondial d\'intercession pour le réveil en Afrique.',en:'Global intercession movement for revival in Africa.'},avC:['#065F46','#E67E22','#1D4ED8'],avL:['K','A','J'],moreAv:844},
+  {id:5,emoji:'🇮🇳',name:'Pray for India',type:'mission',members:1243,prayers:9700,admin:false,desc:{fr:'Prière pour les missionnaires et les persécutés en Inde.',en:'Prayer for missionaries and persecuted believers in India.'},avC:['#7C3AED','#B91C1C','#1D4ED8'],avL:['S','P','A'],moreAv:1240},
+  {id:6,emoji:'🔥',name:'Jeunes en Mission',type:'youth',members:312,prayers:1800,admin:false,desc:{fr:'Communauté de prière pour les 18-30 ans.',en:'Prayer community for 18-30 year olds.'},avC:['#7C3AED','#E67E22','#B91C1C'],avL:['L','M','R'],moreAv:309},
+];
+var INVITATIONS=[
+  {id:'i1',emoji:'🇿🇦',name:'South Africa Prayer Network',type:'intercess',members:56,from:'Pastor Elias M.',days:2,avC:['#065F46','#B91C1C'],avL:['E','M']},
+  {id:'i2',emoji:'📖',name:'Lecteurs de la Parole',type:'prayer',members:23,from:'Sœur Adaeze M.',days:5,avC:['#7C3AED','#065F46'],avL:['A','S']},
+];
+var allGroups=MY_GROUPS.slice();
+
+function typeLabel(tp){var m={prayer:{fr:'Prière',en:'Prayer'},mission:{fr:'Mission',en:'Mission'},family:{fr:'Famille',en:'Family'},church:{fr:'Église',en:'Church'},youth:{fr:'Jeunes',en:'Youth'},intercess:{fr:'Intercession',en:'Intercession'}};return (m[tp]||{fr:'Prière',en:'Prayer'})[lang];}
+function typeCls(tp){return 'gt-'+tp;}
+
+function gcCardHTML(g,showJoin){
+  var j=joinedGroups.has(g.id);
+  return '<div class="gc'+(j?' joined':'')+((j&&g.admin)?' adm':'')+'">'+
+    '<div class="gc-hdr"><div class="gc-emoji">'+g.emoji+'</div><div style="flex:1;min-width:0"><div class="gc-nm">'+g.name+'</div><div class="gc-meta"><span class="gc-type '+typeCls(g.type)+'">'+typeLabel(g.type)+'</span><span class="gc-mbrs">'+(g.members>=1000?fmtN(g.members):g.members)+' '+t('members')+'</span>'+(j&&g.admin?'<span class="gc-badge adm">'+t('adm')+'</span>':'')+(j&&!g.admin?'<span class="gc-badge mem">'+t('mem')+'</span>':'')+'</div></div></div>'+
+    '<div class="gc-desc">'+g.desc[lang]+'</div>'+
+    '<div class="gc-foot"><div class="gc-avs">'+g.avC.map(function(c,i){return '<div class="gc-av" style="background:'+c+'">'+g.avL[i]+'</div>';}).join('')+(g.moreAv>0?'<div class="gc-av" style="background:var(--lift2);color:var(--text-muted);font-family:var(--font-ui);font-size:0.45rem">+'+g.moreAv+'</div>':'')+'</div><span class="gc-stat">🙏 '+fmtN(g.prayers)+' '+t('prayers')+'</span>'+
+    (showJoin?'<button class="btn-join" style="margin-left:auto" onclick="joinGroup('+g.id+')">'+t('join')+'</button>':'<button class="btn-open" style="margin-left:auto" onclick="showToast(\'👥\',t(\'grp_open\'))">'+t('open')+'</button>')+
+    '</div></div>';
+}
+
+function grpTab(tab,btn){document.querySelectorAll('#p-groups .tab').forEach(function(t){t.classList.remove('active');});btn.classList.add('active');activeGrpTab=tab;renderGrpTab(tab);}
+function renderGrpTab(tab){var s=document.getElementById('grp-scroll');s.innerHTML='';setTimeout(function(){if(tab==='mine')renderMine();else if(tab==='explore')renderExpGrps();else renderInvits();},20);}
+
+function renderMine(){
+  var s=document.getElementById('grp-scroll');
+  var mine=allGroups.filter(function(g){return joinedGroups.has(g.id);});
+  s.innerHTML=(mine.length?'<div class="sec-lbl">'+(lang==='fr'?'Mes communautés':'My communities')+'<span>'+mine.length+'</span></div>'+mine.map(function(g){return gcCardHTML(g,false);}).join(''):
+    '<div style="padding:3rem 1rem;text-align:center;color:var(--text-muted)"><div style="font-size:2rem;margin-bottom:0.7rem;opacity:0.4">👥</div><div style="font-family:var(--font-display);font-style:italic;font-size:1rem;line-height:1.6">'+(lang==='fr'?'Vous n\'avez pas encore de groupe.':'You don\'t have any groups yet.')+'</div></div>')+
+    '<div class="create-banner" onclick="openCreateGrpM()"><div class="cb-icon">＋</div><div class="cb-ttl">'+t('cb_t')+'</div><div class="cb-desc">'+t('cb_d')+'</div></div>'+
+    '<div style="height:0.5rem"></div>';
+}
+function renderExpGrps(){
+  var s=document.getElementById('grp-scroll');
+  s.innerHTML='<div class="sec-lbl">'+(lang==='fr'?'Groupes mondiaux':'Global groups')+'<span>1 247</span></div>'+
+    EXP_GROUPS.map(function(g){return gcCardHTML(g,!joinedGroups.has(g.id));}).join('')+
+    '<div style="height:0.5rem"></div>';
+}
+function renderInvits(){
+  var s=document.getElementById('grp-scroll');
+  var pending=INVITATIONS.filter(function(inv){return !dismissedInvites.has(inv.id);});
+  if(!pending.length){s.innerHTML='<div style="padding:3rem 1rem;text-align:center;color:var(--text-muted)"><div style="font-size:2rem;margin-bottom:0.7rem;opacity:0.4">📩</div><div style="font-family:var(--font-display);font-style:italic;font-size:1rem;line-height:1.6">'+t('no_invit')+'</div></div>';return;}
+  s.innerHTML='<div class="sec-lbl">'+(lang==='fr'?'Invitations reçues':'Received')+'<span>'+pending.length+'</span></div>'+
+    pending.map(function(inv){return '<div class="inv-card" id="icard-'+inv.id+'"><div class="gc-hdr"><div class="gc-emoji">'+inv.emoji+'</div><div style="flex:1;min-width:0"><div class="gc-nm">'+inv.name+'</div><div class="gc-meta"><span class="gc-type '+typeCls(inv.type)+'">'+typeLabel(inv.type)+'</span><span class="gc-mbrs">'+inv.members+' '+t('members')+'</span></div></div></div><div class="inv-from">'+t('inv_from')+' <span>'+inv.from+'</span> · '+(lang==='fr'?'il y a '+inv.days+' jours':inv.days+' days ago')+'</div><div class="inv-acts"><button class="btn-dec" onclick="decInv(\''+inv.id+'\')">'+t('inv_dec')+'</button><button class="btn-acc" onclick="accInv(\''+inv.id+'\')">'+t('inv_acc')+'</button></div></div>';}).join('')+
+    '<div style="height:0.5rem"></div>';
+}
+function joinGroup(id){
+  joinedGroups.add(id);
+  var g=EXP_GROUPS.find(function(x){return x.id===id;});
+  if(g&&!allGroups.find(function(x){return x.id===id;})){g.admin=false;allGroups.push(g);}
+  showToast('🙏',t('grp_joined'));renderGrpTab(activeGrpTab);
+}
+function accInv(id){
+  var el=document.getElementById('icard-'+id);
+  if(el){el.style.transition='all 0.3s';el.style.opacity='0';el.style.transform='translateX(60px)';setTimeout(function(){dismissedInvites.add(id);invitCount=INVITATIONS.filter(function(inv){return !dismissedInvites.has(inv.id);}).length;applyLang();renderInvits();},300);}
+  showToast('✅',t('inv_acced'));
+}
+function decInv(id){
+  var el=document.getElementById('icard-'+id);
+  if(el){el.style.transition='all 0.3s';el.style.opacity='0';el.style.transform='translateX(-60px)';setTimeout(function(){dismissedInvites.add(id);invitCount=INVITATIONS.filter(function(inv){return !dismissedInvites.has(inv.id);}).length;applyLang();renderInvits();},300);}
+  showToast('✕',t('inv_deced'));
+}
+
+/* ═══════ CREATE GROUP MODAL ═══════ */
+function openCreateGrpM(){
+  var types_fr=['🙏 Prière','⛪ Église','🏠 Famille','🌍 Mission','🔥 Jeunes','⚔️ Intercession'];
+  var types_en=['🙏 Prayer','⛪ Church','🏠 Family','🌍 Mission','🔥 Youth','⚔️ Intercession'];
+  var types=lang==='fr'?types_fr:types_en;
+  var html='<div class="modal-ov" onclick="closeMod(event,\'cg-m\')"><div class="modal" onclick="event.stopPropagation()">'+
+    '<div class="modal-handle"></div>'+
+    '<div class="modal-head"><div class="modal-title">'+t('cg_ttl')+'</div><div class="modal-sub">'+t('cg_sub')+'</div></div>'+
+    '<div class="modal-body">'+
+      '<div class="m-field"><label class="m-lbl">'+(lang==='fr'?'Icône du groupe':'Group icon')+'</label><div class="emoji-grid">'+['🙏','⛪','🌍','🔥','✝️','🏠','📖','🕊️','⚔️','🌱'].map(function(e,i){return '<div class="emoji-opt'+(i===0?' sel':'')+'" onclick="selEm(this)">'+e+'</div>';}).join('')+'</div></div>'+
+      '<div class="m-field"><label class="m-lbl">'+t('ml_gn')+'</label><input class="m-inp" id="cg-nm" type="text" maxlength="60" oninput="checkCG()" placeholder="'+t('gn_ph')+'"/></div>'+
+      '<div class="m-field"><label class="m-lbl">'+t('ml_gd')+'</label><textarea class="m-ta" id="cg-desc" rows="2" placeholder="'+t('gd_ph')+'"></textarea></div>'+
+      '<div class="m-field"><label class="m-lbl">'+t('ml_gt')+'</label><div class="type-opts">'+types.map(function(tp,i){return '<div class="type-opt'+(i===0?' active':'')+'" onclick="selType(this)">'+tp+'</div>';}).join('')+'</div></div>'+
+      '<div class="m-field"><label class="m-lbl">'+t('ml_gpr')+'</label><div class="priv-opts"><div class="priv-opt active" onclick="selPriv(this)"><span class="pi">🌍</span><span class="pl">'+t('pub_s')+'</span></div><div class="priv-opt" onclick="selPriv(this)"><span class="pi">🔗</span><span class="pl">'+t('by_inv')+'</span></div><div class="priv-opt" onclick="selPriv(this)"><span class="pi">🔒</span><span class="pl">'+t('priv')+'</span></div></div></div>'+
+      '<div class="plan-info"><div class="plan-info-ttl">'+t('ml_gpl')+'</div>'+
+        '<div class="plan-row"><span class="plan-tier">'+t('pt1')+'</span><span class="plan-price">'+t('pp1')+'</span></div>'+
+        '<div class="plan-row"><span class="plan-tier">'+t('pt2')+'</span><span class="plan-price">'+t('pp2')+'</span></div>'+
+        '<div class="plan-row"><span class="plan-tier">'+t('pt3')+'</span><span class="plan-price">'+t('pp3')+'</span></div>'+
+        '<div class="plan-row"><span class="plan-tier">'+t('pt4')+'</span><span class="plan-price">'+t('pp4')+'</span></div></div>'+
+      '<button class="m-submit" id="cg-sub" disabled onclick="createGroup()">'+t('ml_gs')+'</button>'+
+    '</div></div></div>';
+  document.getElementById('modals').innerHTML='<div id="cg-m">'+html+'</div>';
+  document.body.style.overflow='hidden';
+}
+function selEm(el){document.querySelectorAll('.emoji-opt').forEach(function(e){e.classList.remove('sel');});el.classList.add('sel');selEmoji=el.textContent;}
+function selType(el){document.querySelectorAll('.type-opt').forEach(function(e){e.classList.remove('active');});el.classList.add('active');}
+function selPriv(el){document.querySelectorAll('.priv-opt').forEach(function(e){e.classList.remove('active');});el.classList.add('active');}
+function checkCG(){var v=document.getElementById('cg-nm').value.trim();document.getElementById('cg-sub').disabled=v.length<2;}
+function createGroup(){
+  var name=document.getElementById('cg-nm').value.trim();
+  var desc=document.getElementById('cg-desc').value.trim();
+  if(!name)return;
+  var newG={id:Date.now(),emoji:selEmoji,name:name,type:'prayer',members:1,prayers:0,admin:true,desc:{fr:desc||'',en:desc||''},avC:['#B91C1C'],avL:['H'],moreAv:0};
+  allGroups.unshift(newG);joinedGroups.add(newG.id);
+  var cg=document.getElementById('cg-m');if(cg)cg.remove();document.body.style.overflow='';
+  activeGrpTab='mine';document.querySelectorAll('#p-groups .tab').forEach(function(t){t.classList.remove('active');});document.getElementById('gtm').classList.add('active');
+  renderMine();showToast('🎉',t('grp_created'));
+}
+
+/* ═══════ PROFIL DATA ═══════ */
+var MY_PRAYERS=[
+  {id:1,title:{fr:'Projet AppPray — Que Dieu guide chaque étape',en:'AppPray Project — May God guide every step'},body:{fr:'Seigneur, je Te confie ce projet. Que chaque décision soit guidée par Ta sagesse.',en:'Lord, I entrust this project to You. May every decision be guided by Your wisdom.'},count:214,status:'ongoing',cat:{fr:'Projets',en:'Projects'},date:{fr:'il y a 2j',en:'2d ago'},replies:12},
+  {id:2,title:{fr:'Conférence Chennai — Mission Inde Nov. 2026',en:'Chennai Conference — India Mission Nov. 2026'},body:{fr:'Invitation confirmée de l\'évêque I.M. Dhas — Dieu a ouvert la porte.',en:'Invitation confirmed from Bishop I.M. Dhas — God opened the door.'},count:89,status:'answered',cat:{fr:'Mission',en:'Mission'},date:{fr:'il y a 3 sem.',en:'3w ago'},replies:6},
+  {id:3,title:{fr:'Notre nouvelle maison — Dieu pourvoit',en:'Our new home — God provides'},body:{fr:'Nous sommes désormais propriétaires à La Réunion. Merci Seigneur.',en:'We are now homeowners in La Réunion. Thank you Lord.'},count:342,status:'answered',cat:{fr:'Famille',en:'Family'},date:{fr:'il y a 2 mois',en:'2 months ago'},replies:28},
+  {id:4,title:{fr:'Le sitcom — que Dieu inspire chaque scène',en:'The sitcom — may God inspire every scene'},body:{fr:'Production en cours. Que l\'humour serve la lumière.',en:'Production underway. May humor serve the light.'},count:156,status:'ongoing',cat:{fr:'Projets',en:'Projects'},date:{fr:'il y a 1 mois',en:'1 month ago'},replies:9},
+];
+var MY_TESTIS=[
+  {icon:'✨',title:{fr:'Conférence Chennai',en:'Chennai Conference'},date:{fr:'Il y a 3 semaines',en:'3 weeks ago'},text:{fr:'Après des semaines de prière, l\'invitation officielle est arrivée. L\'évêque I.M. Dhas nous a contactés directement. Dieu a précédé nos pas.',en:'After weeks of prayer, the official invitation arrived. Bishop I.M. Dhas contacted us directly. God preceded our steps.'},r:[47,63,89]},
+  {icon:'🏠',title:{fr:'Notre nouvelle maison',en:'Our new home'},date:{fr:'Il y a 2 mois',en:'2 months ago'},text:{fr:'Ce que nous demandions depuis des années s\'est accompli. Nous sommes désormais propriétaires à La Réunion. Gloire à Dieu !',en:'What we had been asking for years was accomplished. We are now homeowners in La Réunion. Glory to God!'},r:[112,98,134]},
+];
+var JOURNEY=[
+  {dot:'gold',date:{fr:'Juin 2025 — Lancement',en:'June 2025 — Launch'},text:{fr:'<strong>Rejoint AppPray</strong> — Première prière publiée pour le projet.',en:'<strong>Joined AppPray</strong> — First prayer posted for the project.'}},
+  {dot:'',date:{fr:'Juillet 2025',en:'July 2025'},text:{fr:'<strong>Badge Intercesseur</strong> — 100 prières soutenues.',en:'<strong>Intercessor badge</strong> — 100 prayers supported.'}},
+  {dot:'gold',date:{fr:'Août 2025 — Exaucement',en:'August 2025 — Answer'},text:{fr:'<strong>Maison acquise ✨</strong> — Prière de longue date exaucée à La Réunion.',en:'<strong>Home acquired ✨</strong> — Long-standing prayer answered in La Réunion.'}},
+  {dot:'blue',date:{fr:'Octobre 2025 — Mission',en:'October 2025 — Mission'},text:{fr:'<strong>Invitation Chennai confirmée</strong> — Conférence GGMM, Novembre 2026.',en:'<strong>Chennai invitation confirmed</strong> — GGMM Conference, November 2026.'}},
+  {dot:'green',date:{fr:'Décembre 2025',en:'December 2025'},text:{fr:'<strong>Badge Fondateur</strong> — Parmi les premiers 500 membres d\'AppPray.',en:'<strong>Founder badge</strong> — Among the first 500 AppPray members.'}},
+  {dot:'',date:{fr:"Aujourd'hui",en:'Today'},text:{fr:'<strong>AppPray en construction</strong> — La prière mondiale commence ici.',en:'<strong>AppPray under construction</strong> — Global prayer starts here.'}},
+];
+var reactedT=new Set();
+
+function proTab(tab,btn){document.querySelectorAll('#p-profile .tab').forEach(function(t){t.classList.remove('active');});btn.classList.add('active');activeProTab=tab;renderProTab(tab);}
+function renderProTab(tab){var c=document.getElementById('pro-content');c.innerHTML='';setTimeout(function(){if(tab==='prayers')renderMyPrayers();else if(tab==='testi')renderMyTestis();else renderJourney();},20);}
+
+function renderMyPrayers(){
+  var c=document.getElementById('pro-content');
+  c.innerHTML=MY_PRAYERS.map(function(p){
+    var bcls={answered:'mc-b a',ongoing:'mc-b o',urgent:'mc-b u'}[p.status];
+    var blbl={answered:t('a_lbl_p'),ongoing:t('o_lbl_p'),urgent:t('u_lbl_p')}[p.status];
+    return '<div class="mc'+(p.status==='answered'?' ans':p.status==='urgent'?' urg':'')+'">'+
+      '<div class="mc-hdr"><div class="mc-ttl">'+p.title[lang]+'</div><span class="'+bcls+'"><span class="mc-dot"></span>'+blbl+'</span></div>'+
+      '<div class="mc-body">'+p.body[lang]+'</div>'+
+      '<div class="mc-foot"><span class="mc-stat">🙏 '+p.count+'</span><span class="mc-stat">💬 '+p.replies+'</span><span class="mc-stat">📂 '+p.cat[lang]+'</span><span class="mc-date">'+p.date[lang]+'</span></div>'+
+    '</div>';
+  }).join('');
+}
+function renderMyTestis(){
+  var c=document.getElementById('pro-content');
+  c.innerHTML=MY_TESTIS.map(function(te,idx){
+    return '<div class="pro-tc">'+
+      '<div class="tc-hdr"><span class="tc-icon">'+te.icon+'</span><span class="tc-lbl">'+t('testi_l')+'</span><span class="tc-date">'+te.date[lang]+'</span></div>'+
+      '<div class="tc-ref">↳ '+te.title[lang]+'</div>'+
+      '<div class="tc-text">'+te.text[lang]+'</div>'+
+      '<div class="tc-reacts">'+[['🙌',te.r[0]],['❤️',te.r[1]],['🙏',te.r[2]]].map(function(r,i){var k=idx+'-'+i;return '<button class="tc-r'+(reactedT.has(k)?' on':'')+'" onclick="reactT(\''+k+'\',this)">'+r[0]+' <span>'+r[1]+'</span></button>';}).join('')+'</div>'+
+    '</div>';
+  }).join('');
+}
+function reactT(k,btn){if(reactedT.has(k))return;reactedT.add(k);var s=btn.querySelector('span');s.textContent=parseInt(s.textContent)+1;btn.classList.add('on');btn.style.transform='scale(1.3)';setTimeout(function(){btn.style.transform='';},200);}
+function renderJourney(){
+  var c=document.getElementById('pro-content');
+  c.innerHTML='<div class="tl-wrap"><div class="tl-sec">'+t('tl_t')+'</div><div class="timeline">'+
+    JOURNEY.map(function(item){return '<div class="tl-item"><div class="tl-dot'+(item.dot?' '+item.dot:'')+'"></div><div class="tl-date">'+item.date[lang]+'</div><div class="tl-text">'+item.text[lang]+'</div></div>';}).join('')+
+  '</div></div>';
+}
+
+/* ═══════ EDIT PROFIL MODAL ═══════ */
+function openEditProM(){
+  var html='<div class="modal-ov" onclick="closeMod(event,\'ep-m\')"><div class="modal" onclick="event.stopPropagation()">'+
+    '<div class="modal-handle"></div>'+
+    '<div class="modal-head"><div class="modal-title">'+t('em_t')+'</div></div>'+
+    '<div class="modal-body">'+
+      '<div class="m-field"><label class="m-lbl">'+t('em_nm')+'</label><input class="m-inp" id="ep-nm" type="text" value="Harry MC-Harry"/></div>'+
+      '<div class="m-field"><label class="m-lbl">'+t('em_bi')+'</label><textarea class="m-ta" id="ep-bio">Pasteur · Conférencier · Créateur de contenu. La Réunion 🇷🇪</textarea></div>'+
+      '<div class="m-field"><label class="m-lbl">'+t('em_lo')+'</label><input class="m-inp" id="ep-loc" type="text" value="La Réunion, France"/></div>'+
+      '<div class="m-field"><label class="m-lbl">'+t('em_ch')+' <span style="color:var(--text-muted);font-size:0.48rem;text-transform:none;letter-spacing:0.05em;font-weight:400">'+(lang==='fr'?'(facultatif)':'(optional)')+'</span></label>'+
+        '<input class="m-inp" id="ep-ch" type="text" value="Église Évangélique"/>'+
+        '<div class="m-hint">'+t('em_hint')+'</div></div>'+
+      '<div class="m-field"><label class="m-lbl">'+t('em_li')+'</label><input class="m-inp" id="ep-li" type="text" placeholder="https://..."/></div>'+
+      '<button class="m-submit" onclick="saveProfile()">'+t('em_sb')+'</button>'+
+    '</div></div></div>';
+  document.getElementById('modals').innerHTML='<div id="ep-m">'+html+'</div>';
+  document.body.style.overflow='hidden';
+}
+function saveProfile(){
+  var name=document.getElementById('ep-nm').value.trim();
+  var bio=document.getElementById('ep-bio').value.trim();
+  var church=document.getElementById('ep-ch').value.trim();
+  if(name){setTxt('pro-name',name);}
+  if(bio){setTxt('pro-bio',bio);}
+  var cw=document.getElementById('pro-church-wrap');
+  if(church){setTxt('pro-church',church);if(cw)cw.style.display='';}
+  else{if(cw)cw.style.display='none';}
+  var ep=document.getElementById('ep-m');if(ep)ep.remove();document.body.style.overflow='';
+  showToast('✅',t('saved'));
+}
+
+/* ═══════ DON MODAL ═══════ */
+function openDonM(){
+  var amts=[5,10,20,50,100,null];
+  var lbls=['dl_co','dl_me','dl_su','dl_pa','dl_vi','dl_fr'];
+  var html='<div class="modal-ov" onclick="closeMod(event,\'don-m\')"><div class="modal" onclick="event.stopPropagation()">'+
+    '<div class="modal-handle"></div>'+
+    '<div class="modal-head"><div class="modal-title">'+t('dm_t')+'</div></div>'+
+    '<div class="modal-body">'+
+      '<div class="don-amts">'+amts.map(function(a,i){return '<div class="don-amt'+(a===10?' sel':'')+'" onclick="selDon(this,'+a+')">'+
+        '<span class="dv">'+(a===null?'✏️':a+'€')+'</span><span class="dl">'+t(lbls[i])+'</span></div>';}).join('')+'</div>'+
+      '<input class="don-free-inp" id="don-free" type="number" min="1" placeholder="'+(lang==='fr'?'Montant libre (€)':'Custom amount (€)')+'" style="display:none"/>'+
+      '<div class="don-transp">'+t('don_tr')+'</div>'+
+      '<button class="m-submit" id="don-sub" onclick="submitDon()">'+(lang==='fr'?'Faire un don de 10€ ❤️':'Donate 10€ ❤️')+'</button>'+
+    '</div></div></div>';
+  document.getElementById('modals').innerHTML='<div id="don-m">'+html+'</div>';
+  document.body.style.overflow='hidden';
+  donAmt=10;
+}
+function selDon(el,amt){
+  document.querySelectorAll('.don-amt').forEach(function(e){e.classList.remove('sel');});el.classList.add('sel');donAmt=amt;
+  var fi=document.getElementById('don-free');if(fi)fi.style.display=amt===null?'block':'none';
+  var sub=document.getElementById('don-sub');if(sub)sub.textContent=amt!==null?(lang==='fr'?'Faire un don de '+amt+'€ ❤️':'Donate '+amt+'€ ❤️'):(lang==='fr'?'Confirmer mon don ❤️':'Confirm donation ❤️');
+}
+function submitDon(){
+  var amt=donAmt||parseInt(document.getElementById('don-free').value)||0;
+  var dm=document.getElementById('don-m');if(dm)dm.remove();document.body.style.overflow='';
+  showToast('❤️',t('don_conf').replace('{amt}',amt));spawnConfettiGold();
+}
+
+/* ═══════ TOAST ═══════ */
+var toastT;
+function showToast(icon,msg){
+  var el=document.getElementById('toast');
+  document.getElementById('t-icon').textContent=icon;document.getElementById('t-msg').textContent=msg;
+  el.classList.add('show');clearTimeout(toastT);toastT=setTimeout(function(){el.classList.remove('show');},2800);
+}
+
+/* ═══════ PARTICLES ═══════ */
+/* ═══════ CANVAS EFFECTS ═══════ */
+var fxCanvas=null,fxCtx=null,fxParticles=[];
+function initFX(){
+  fxCanvas=document.getElementById('fx-canvas');
+  if(!fxCanvas)return;
+  fxCanvas.width=fxCanvas.offsetWidth||480;
+  fxCanvas.height=fxCanvas.offsetHeight||window.innerHeight;
+  fxCtx=fxCanvas.getContext('2d');
+  drawFX();
+}
+function drawFX(){
+  if(!fxCtx)return;
+  fxCtx.clearRect(0,0,fxCanvas.width,fxCanvas.height);
+  fxParticles=fxParticles.filter(function(p){
+    p.life-=0.025;
+    p.x+=p.vx; p.y+=p.vy; p.vy+=p.gravity;
+    p.vx*=0.98; p.rotation+=p.rotSpeed;
+    if(p.life<=0)return false;
+    fxCtx.save();
+    fxCtx.globalAlpha=Math.max(0,p.life);
+    fxCtx.translate(p.x,p.y);
+    fxCtx.rotate(p.rotation);
+    fxCtx.fillStyle=p.color;
+    if(p.shape==='circle'){
+      fxCtx.beginPath();fxCtx.arc(0,0,p.size,0,Math.PI*2);fxCtx.fill();
+    } else {
+      fxCtx.fillRect(-p.size/2,-p.size/2,p.size,p.size);
+    }
+    fxCtx.restore();
+    return true;
+  });
+  requestAnimationFrame(drawFX);
+}
+
+function spawnParticles(e){
+  if(!fxCtx)initFX();
+  var canvas=document.getElementById('fx-canvas');
+  if(!canvas)return;
+  var rect=canvas.getBoundingClientRect();
+  var x=(e?e.clientX:window.innerWidth/2)-rect.left;
+  var y=(e?e.clientY:window.innerHeight/2)-rect.top;
+  var colors=['#C8102E','#C9A84C','#E8420A','#E8CA6A','#ffffff','#FF6B6B'];
+  for(var i=0;i<24;i++){
+    var angle=Math.random()*Math.PI*2;
+    var speed=Math.random()*8+2;
+    fxParticles.push({
+      x:x,y:y,
+      vx:Math.cos(angle)*speed,vy:Math.sin(angle)*speed-4,
+      gravity:0.15,life:1,
+      size:Math.random()*6+3,
+      color:colors[Math.floor(Math.random()*colors.length)],
+      shape:'circle',rotation:0,rotSpeed:0
+    });
+  }
+}
+
+function spawnConfetti(){
+  if(!fxCtx)initFX();
+  var canvas=document.getElementById('fx-canvas');
+  if(!canvas)return;
+  var colors=['#C9A84C','#E8CA6A','#C8102E','#ffffff','#F0EBE0','#2ECC71'];
+  for(var i=0;i<40;i++){
+    fxParticles.push({
+      x:Math.random()*canvas.width,y:-10,
+      vx:(Math.random()-0.5)*4,vy:Math.random()*3+2,
+      gravity:0.08,life:1,
+      size:Math.random()*7+3,
+      color:colors[Math.floor(Math.random()*colors.length)],
+      shape:Math.random()>0.5?'circle':'square',
+      rotation:Math.random()*Math.PI*2,rotSpeed:(Math.random()-0.5)*0.2
+    });
+  }
+}
+
+function spawnConfettiGold(){
+  if(!fxCtx)initFX();
+  var canvas=document.getElementById('fx-canvas');
+  if(!canvas)return;
+  var colors=['#C9A84C','#E8CA6A','#F0EBE0','#C8102E'];
+  for(var i=0;i<28;i++){
+    fxParticles.push({
+      x:canvas.width*0.2+Math.random()*canvas.width*0.6,y:canvas.height*0.3,
+      vx:(Math.random()-0.5)*5,vy:-(Math.random()*6+2),
+      gravity:0.1,life:1,
+      size:Math.random()*6+2,
+      color:colors[Math.floor(Math.random()*colors.length)],
+      shape:Math.random()>0.5?'circle':'square',
+      rotation:Math.random()*Math.PI*2,rotSpeed:(Math.random()-0.5)*0.15
+    });
+  }
+}
+
+/* ═══════ NOTIFICATIONS IN-APP ═══════ */
+var NOTIFS=[
+  {id:1,icon:'🙏',msg_fr:'Marie-Claire K. vous remercie — 382 personnes prient pour son fils.',msg_en:'Marie-Claire K. thanks you — 382 people are praying for her son.',time:'il y a 2 min',read:false,type:'thanks'},
+  {id:2,icon:'✨',msg_fr:'Bonne nouvelle ! La prière de Pastor Emmanuel N. a été exaucée.',msg_en:'Great news! Pastor Emmanuel N. prayer has been answered.',time:'il y a 1h',read:false,type:'answered'},
+  {id:3,icon:'👥',msg_fr:'Sœur Lydia M. a rejoint votre groupe "AppPray Réunion".',msg_en:'Sister Lydia M. joined your group "AppPray Réunion".',time:'il y a 3h',read:false,type:'group'},
+  {id:4,icon:'🔔',msg_fr:'3 nouvelles prières urgentes dans votre réseau.',msg_en:'3 new urgent prayers in your network.',time:'il y a 5h',read:true,type:'urgent'},
+  {id:5,icon:'🌍',msg_fr:'Votre prière "Projet AppPray" a été soutenue par 214 intercesseurs.',msg_en:'Your prayer "AppPray Project" has been supported by 214 intercessors.',time:'il y a 1j',read:true,type:'support'},
+  {id:6,icon:'📩',msg_fr:'Invitation de Pastor Elias M. — South Africa Prayer Network.',msg_en:'Invitation from Pastor Elias M. — South Africa Prayer Network.',time:'il y a 2j',read:true,type:'invite'},
+];
+
+function openNotifCenter(){
+  var nc = document.getElementById('notif-center');
+  var unread = NOTIFS.filter(function(n){return !n.read;}).length;
+  var rows = '';
+  for(var i=0;i<NOTIFS.length;i++){
+    var n = NOTIFS[i];
+    var bg = n.read ? 'var(--abyss)' : 'var(--surface)';
+    var dotHtml = n.read ? '' : '<span style="width:6px;height:6px;border-radius:50%;background:var(--flame);display:inline-block;margin-right:4px"></span>';
+    var iconBg = n.read ? 'var(--lift)' : 'rgba(200,16,46,0.12)';
+    var iconBd = n.read ? 'var(--border)' : 'var(--border-flame)';
+    var fw = n.read ? '400' : '500';
+    var fc = n.read ? 'var(--text-dim)' : 'var(--text)';
+    var msg = lang==='fr' ? n.msg_fr : n.msg_en;
+    rows += '<div id="nr-'+n.id+'" style="display:flex;align-items:flex-start;gap:0.75rem;padding:0.9rem 1rem;border-bottom:1px solid var(--border);background:'+bg+';cursor:pointer" onclick="markRead('+n.id+')">';
+    rows += '<div style="width:38px;height:38px;border-radius:50%;background:'+iconBg+';border:1px solid '+iconBd+';display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0">'+n.icon+'</div>';
+    rows += '<div style="flex:1;min-width:0">';
+    rows += '<div style="font-family:var(--font-ui);font-size:0.72rem;font-weight:'+fw+';color:'+fc+';line-height:1.45;margin-bottom:0.2rem">'+msg+'</div>';
+    rows += '<div style="font-family:var(--font-ui);font-size:0.52rem;color:var(--text-muted);display:flex;align-items:center">'+dotHtml+n.time+'</div>';
+    rows += '</div></div>';
+  }
+  var markAll = unread>0 ? '<span style="font-family:var(--font-ui);font-size:0.58rem;color:var(--gold);cursor:pointer;letter-spacing:0.08em" onclick="markAllRead()">'+(lang==='fr'?'Tout lire':'Mark all read')+'</span>' : '';
+  var html = '<div style="position:absolute;inset:0;background:rgba(0,0,0,0.7);display:flex;flex-direction:column" onclick="closeNotifCenter(event)">';
+  html += '<div style="background:var(--abyss);border-bottom:1px solid var(--border);flex:1;margin-top:58px;overflow-y:auto;animation:fadeUp 0.3s var(--ease-out)" onclick="event.stopPropagation()">';
+  html += '<div style="display:flex;align-items:center;justify-content:space-between;padding:1rem;border-bottom:1px solid var(--border)">';
+  html += '<div style="font-family:var(--font-display);font-size:1.5rem;font-weight:600">'+(lang==='fr'?'Notifications':'Notifications')+'</div>';
+  html += '<div style="display:flex;align-items:center;gap:0.6rem">'+markAll+'<div style="cursor:pointer;font-size:1.2rem;color:var(--text-muted)" onclick="closeNotifCenter(null)">✕</div></div>';
+  html += '</div>';
+  html += rows;
+  html += '<div style="height:4rem"></div></div></div>';
+  nc.innerHTML = html;
+  nc.style.display = 'block';
+}
+
+function closeNotifCenter(e){
+  if(!e||e.target.id==='notif-center'||e.target.tagName==='DIV'&&!e.target.closest('[onclick*="markRead"]')){
+    document.getElementById('notif-center').style.display='none';
+  }
+}
+
+function markRead(id){NOTIFS.forEach(function(n){if(n.id===id)n.read=true;});openNotifCenter();}
+function markAllRead(){NOTIFS.forEach(function(n){n.read=true;});openNotifCenter();}
+
+function getUnreadCount(){return NOTIFS.filter(function(n){return !n.read;}).length;}
+
+function updateNotifBadge(){
+  var count=getUnreadCount();
+  document.querySelectorAll('.notif-dot').forEach(function(dot){
+    dot.style.display=count>0?'block':'none';
+  });
+}
+
+/* Push notification simulée */
+function pushNotif(icon, msg){
+  var popup=document.getElementById('notif-popup');
+  if(!popup)return;
+  popup.innerHTML='<div style="margin:0.7rem;background:var(--lift);border:1px solid var(--border-gold);padding:0.75rem 1rem;display:flex;align-items:center;gap:0.6rem;animation:slideDown 0.4s var(--ease-out),fadeOut 0.4s ease 2.4s forwards;pointer-events:none">'+
+    '<span style="font-size:1.1rem">'+icon+'</span>'+
+    '<div style="flex:1;min-width:0">'+
+      '<div style="font-family:var(--font-ui);font-size:0.6rem;font-weight:500;color:var(--text);line-height:1.4">'+msg+'</div>'+
+      '<div style="font-family:var(--font-ui);font-size:0.5rem;color:var(--gold);margin-top:1px;letter-spacing:0.06em">AppPray</div>'+
+    '</div>'+
+    '<div style="font-family:var(--font-title);font-size:1.1rem;color:var(--flame)">A<span style="color:var(--flame)">PPP</span>RAY</div>'+
+  '</div>';
+  setTimeout(function(){popup.innerHTML='';},2900);
+}
+
+/* Ajouter slideDown et fadeOut */
+var style=document.createElement('style');
+style.textContent=
+  '@keyframes slideDown{from{transform:translateY(-100%);opacity:0}to{transform:translateY(0);opacity:1}}'+
+  '@keyframes fadeOut{from{opacity:1}to{opacity:0}}'+
+  '@keyframes mslide{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}';
+document.head.appendChild(style);
+
+
+/* ═══════════════════════════════════════════════════════
+   SUPABASE — FONCTIONS UTILITAIRES
+═══════════════════════════════════════════════════════ */
+
+async function loadProfile(){
+  if(!currentUser)return;
+  try{
+    var res=await supa.from('profiles').select('*').eq('id',currentUser.id).single();
+    if(!res.error&&res.data) currentProfile=res.data;
+  }catch(e){console.warn('Profil non chargé:',e);}
+}
+
+async function loadRealPrayers(){
+  try{
+    var res=await supa.from('prayers')
+      .select('*, profiles(display_name,avatar_letter,avatar_color,country,city)')
+      .eq('visibility','world')
+      .order('created_at',{ascending:false})
+      .limit(20);
+    if(res.error||!res.data||res.data.length===0) return false;
+    // Convertir format Supabase → format local
+    var realPrayers=res.data.map(function(p){
+      var profile=p.profiles||{};
+      return {
+        id:p.id,
+        user:p.is_anonymous?null:(profile.display_name||'Utilisateur'),
+        anon:p.is_anonymous,
+        flag:'🌍',
+        loc:profile.city||profile.country||'',
+        av:p.is_anonymous?'?':(profile.avatar_letter||'?'),
+        col:p.is_anonymous?'#374151':(profile.avatar_color||'#C8102E'),
+        time:{fr:timeAgo(p.created_at,'fr'),en:timeAgo(p.created_at,'en')},
+        title:{fr:p.title,en:p.title},
+        body:{fr:p.body||'',en:p.body||''},
+        count:p.support_count||0,
+        cat:p.category||'other',
+        status:p.status||'ongoing',
+        replies:p.reply_count||0,
+        vocal:false,online:false,
+        update:null,
+        _real:true
+      };
+    });
+    // Fusionner avec les données fictives de démo
+    PRAYERS=realPrayers.concat(PRAYERS.filter(function(p){return !p._real;}));
+    return true;
+  }catch(e){
+    console.warn('Chargement prières:',e);
+    return false;
+  }
+}
+
+function timeAgo(dateStr,l){
+  var diff=Math.floor((Date.now()-new Date(dateStr).getTime())/1000);
+  if(diff<60) return l==='fr'?'a l instant':'just now';
+  if(diff<3600){var m=Math.floor(diff/60);return l==='fr'?'il y a '+m+' min':m+' min ago';}
+  if(diff<86400){var h=Math.floor(diff/3600);return l==='fr'?'il y a '+h+'h':h+'h ago';}
+  var d=Math.floor(diff/86400);return l==='fr'?'il y a '+d+'j':d+'d ago';
+}
+
+async function togglePraySupport(prayerId, add){
+  if(!currentUser) return;
+  try{
+    if(add){
+      await supa.from('prayer_supports').insert({prayer_id:prayerId,user_id:currentUser.id});
+    } else {
+      await supa.from('prayer_supports').delete()
+        .eq('prayer_id',prayerId).eq('user_id',currentUser.id);
+    }
+  }catch(e){console.warn('Support:',e);}
+}
+
+async function loadUserSupports(){
+  if(!currentUser) return;
+  try{
+    var res=await supa.from('prayer_supports')
+      .select('prayer_id').eq('user_id',currentUser.id);
+    if(!res.error&&res.data){
+      res.data.forEach(function(s){ prayedIds.add(s.prayer_id); });
+    }
+  }catch(e){console.warn('Supports:',e);}
+}
+
+// Souscrire aux nouvelles prières en temps réel
+function subscribeToRealtime(){
+  supa.channel('prayers_feed')
+    .on('postgres_changes',{event:'INSERT',schema:'public',table:'prayers'},function(payload){
+      var p=payload.new;
+      if(p.visibility!=='world') return;
+      var newP={
+        id:p.id,user:'Nouveau membre',anon:p.is_anonymous,flag:'🌍',loc:'',
+        av:'?',col:'#C8102E',
+        time:{fr:'a l instant',en:'just now'},
+        title:{fr:p.title,en:p.title},
+        body:{fr:p.body||'',en:p.body||''},
+        count:0,cat:p.category,status:p.status,replies:0,vocal:false,online:true,update:null,_real:true
+      };
+      PRAYERS.unshift(newP);
+      if(activeCat==='all'||activeCat===p.category){
+        renderFeed();
+        showToast('🙏',lang==='fr'?'Nouvelle prière publiée':'New prayer published');
+      }
+    })
+    .subscribe();
+}
+
+// Vérifier la session existante au chargement
+async function checkSession(){
+  try{
+    var res=await supa.auth.getSession();
+    if(res.data&&res.data.session&&res.data.session.user){
+      currentUser=res.data.session.user;
+      await loadProfile();
+      return true;
+    }
+  }catch(e){console.warn('Session:',e);}
+  return false;
+}
+
+/* ═══════ INIT ═══════ */
+applyLang();
+document.getElementById('fp-ta').placeholder=t('fp_ph');
+setTimeout(initPTR, 500);
+setTimeout(initFX, 200);
+
+// Vérifier session existante au chargement
+(async function(){
+  var hasSession = await checkSession();
+  if(hasSession){
+    showToast('🙏', lang==='fr'?'Reconnecté — bienvenue !':'Reconnected — welcome!');
+    updateTopbarAvatar();
+    // Rediriger directement vers le feed si session active
+    setTimeout(function(){ navTo('feed'); }, 300);
+  }
+})();
+
+/* Simule des notifications push après 4s et 8s */
+setTimeout(function(){
+  pushNotif('✨',lang==='fr'?'Bonne nouvelle ! La prière de Pastor Emmanuel N. a été exaucée.':'Great news! Pastor Emmanuel N. prayer has been answered.');
+  NOTIFS.unshift({id:Date.now(),icon:'✨',msg_fr:'Bonne nouvelle ! La prière de Pastor Emmanuel N. a été exaucée.',msg_en:'Great news! Pastor Emmanuel N. prayer has been answered.',time:'a l instant',read:false,type:'answered'});
+  updateNotifBadge();
+}, 4000);
+setTimeout(function(){
+  pushNotif('🙏',lang==='fr'?'47 personnes viennent de prier pour vous.':'47 people just prayed for you.');
+  NOTIFS.unshift({id:Date.now(),icon:'🙏',msg_fr:'47 personnes viennent de prier pour vous.',msg_en:'47 people just prayed for you.',time:'a l instant',read:false,type:'support'});
+  updateNotifBadge();
+}, 8000);
+updateNotifBadge();
+</script>
+</body>
+</html>
