@@ -1105,6 +1105,20 @@ function checkLI(){
   var pw=document.getElementById('li-pw').value.length>=6;
   document.getElementById('li-btn').disabled=!(em&&pw);
 }
+  async function doForgotPassword(){
+  var email=document.getElementById('li-em').value.trim();
+  if(!email||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){
+    showToast('⚠️',lang==='fr'?'Entrez d\'abord votre email ci-dessus':'Enter your email above first');
+    return;
+  }
+  try{
+    var res=await supa.auth.resetPasswordForEmail(email,{redirectTo:'https://apppray.vercel.app'});
+    if(res.error) throw res.error;
+    showToast('📧',lang==='fr'?'Email envoyé — vérifiez votre boîte mail':'Email sent — check your inbox');
+  }catch(err){
+    showToast('⚠️',lang==='fr'?'Erreur — réessayez':'Error — please try again');
+  }
+}
 async function doSignup(){
   var btn=document.getElementById('su-btn');
   btn.textContent='...';btn.disabled=true;
