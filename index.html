@@ -526,7 +526,10 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:998;op
     <div class="form-title" id="li-title">Bon<br>retour 🙏</div>
     <div class="form-sub" id="li-sub">Continuez à prier avec la communauté mondiale.</div>
     <input class="auth-input" type="email" id="li-em" oninput="checkLI()" placeholder="vous@exemple.com"/>
-    <input class="auth-input" type="password" id="li-pw" oninput="checkLI()" placeholder="Votre mot de passe"/>
+    <div style="position:relative">
+  <input class="auth-input" type="password" id="li-pw" oninput="checkLI()" placeholder="Votre mot de passe" style="padding-right:2.8rem"/>
+  <span onclick="togglePwVisibility('li-pw',this)" style="position:absolute;right:1rem;top:50%;transform:translateY(-50%);cursor:pointer;font-size:1rem;color:var(--text-muted)">👁️</span>
+</div>
     <div style="text-align:right;margin-bottom:0.9rem"><span class="auth-link" style="font-size:0.65rem" onclick="doForgotPassword()">Mot de passe oublié ?</span></div>
     <div class="auth-sep"><div class="auth-sep-line"></div><span class="auth-sep-txt" id="li-or">ou</span><div class="auth-sep-line"></div></div>
     <button class="social-btn" onclick="doLogin()"><span>🔵</span><span id="li-g">Continuer avec Google</span></button>
@@ -1111,6 +1114,16 @@ function checkPW(){
     else if(s<=2){lbl.textContent=(lang==='fr'?'🔴 Mot de passe faible':'🔴 Weak password');lbl.style.color='#E74C3C';}
     else if(s===3){lbl.textContent=(lang==='fr'?'🟠 Mot de passe moyen':'🟠 Medium password');lbl.style.color='#E67E22';}
     else{lbl.textContent=(lang==='fr'?'🟢 Mot de passe fort':'🟢 Strong password');lbl.style.color='#27AE60';}
+  }
+}
+  function togglePwVisibility(inputId,iconEl){
+  var input=document.getElementById(inputId);
+  if(input.type==='password'){
+    input.type='text';
+    iconEl.textContent='🙈';
+  } else {
+    input.type='password';
+    iconEl.textContent='👁️';
   }
 }
 function checkLI(){
