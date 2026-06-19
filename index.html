@@ -1967,6 +1967,8 @@ function subscribeToRealtime(){
     .on('postgres_changes',{event:'INSERT',schema:'public',table:'prayers'},function(payload){
       var p=payload.new;
       if(p.visibility!=='world') return;
+      var alreadyExists=PRAYERS.some(function(x){return x.id===p.id;});
+if(alreadyExists) return;
       var newP={
         id:p.id,user:'Nouveau membre',anon:p.is_anonymous,flag:'🌍',loc:'',
         av:'?',col:'#C8102E',
