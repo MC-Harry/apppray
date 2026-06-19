@@ -536,7 +536,20 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:998;op
     <div class="auth-switch"><span id="li-sw1">Pas encore de compte ? </span><span class="auth-link" onclick="goPage('signup')" id="li-sw2">S'inscrire gratuitement</span></div>
   </div>
 </div>
-
+<!-- ═══════════ RESET PASSWORD ═══════════ -->
+<div class="page" id="p-reset" style="background:var(--abyss)">
+  <div class="auth-hdr">
+    <div class="logo">A<span class="r">PPP</span>RAY</div>
+  </div>
+  <div class="auth-form" style="text-align:center">
+    <div style="font-size:3rem;margin:1.5rem 0 1rem">🔑</div>
+    <div class="form-title" style="text-align:center" id="rp-title">Nouveau<br>mot de passe</div>
+    <div class="form-sub" style="text-align:center" id="rp-sub">Choisissez un nouveau mot de passe pour votre compte.</div>
+    <input class="auth-input" type="password" id="rp-pw" oninput="checkRP()" placeholder="Nouveau mot de passe (8 caractères minimum)"/>
+    <input class="auth-input" type="password" id="rp-pw2" oninput="checkRP()" placeholder="Confirmez le mot de passe"/>
+    <button class="btn-main" id="rp-btn" disabled onclick="doResetPassword()"><span id="rp-cta">Mettre à jour le mot de passe</span></button>
+  </div>
+</div>
 <!-- ═══════════ VERIFY ═══════════ -->
 <div class="page" id="p-verify" style="background:var(--abyss)">
   <div class="auth-hdr">
@@ -1104,6 +1117,25 @@ function checkLI(){
   var em=/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(document.getElementById('li-em').value);
   var pw=document.getElementById('li-pw').value.length>=6;
   document.getElementById('li-btn').disabled=!(em&&pw);
+}
+  function checkRP(){
+  var pw=document.getElementById('rp-pw').value;
+  var pw2=document.getElementById('rp-pw2').value;
+  document.getElementById('rp-btn').disabled=!(pw.length>=8&&pw===pw2);
+}
+async function doResetPassword(){
+  var pw=document.getElementById('rp-pw').value;
+  var btn=document.getElementById('rp-btn');
+  btn.disabled=true;btn.textContent='...';
+  try{
+    var res=await supa.auth.updateUser({password:pw});
+    if(res.error) throw res.error;
+    showToast('✅',lang==='fr'?'Mot de passe mis à jour !':'Password updated!');
+    setTimeout(function(){ navTo('feed'); },1000);
+  }catch(err){
+    showToast('⚠️',lang==='fr'?'Erreur — réessayez':'Error — please try again');
+    btn.disabled=false;btn.innerHTML='<span id="rp-cta">Mettre à jour le mot de passe</span>';
+  }
 }
   async function doForgotPassword(){
   var email=document.getElementById('li-em').value.trim();
@@ -2021,7 +2053,14 @@ async function checkSession(){
   }catch(e){console.warn('Session:',e);}
   return false;
 }
-
+function checkPasswordRecovery(){
+  var hash=window.location.hash;
+  if(hash&&hash.indexOf('type=recovery')!==-1){
+    goPage('reset');
+    return true;
+  }
+  return false;
+}
 /* ═══════ INIT ═══════ */
 applyLang();
 document.getElementById('fp-ta').placeholder=t('fp_ph');
@@ -2030,11 +2069,11 @@ setTimeout(initFX, 200);
 
 // Vérifier session existante au chargement
 (async function(){
+  var isRecovery = checkPasswordRecovery();
   var hasSession = await checkSession();
-  if(hasSession){
+  if(hasSession && !isRecovery){
     showToast('🙏', lang==='fr'?'Reconnecté — bienvenue !':'Reconnected — welcome!');
     updateTopbarAvatar();
-    // Rediriger directement vers le feed si session active
     setTimeout(function(){ navTo('feed'); }, 300);
   }
 })();
