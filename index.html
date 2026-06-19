@@ -491,7 +491,10 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:998;op
       <input class="auth-input" style="margin-bottom:0" type="text" id="su-ln" oninput="checkSU()" placeholder="Nom"/>
     </div>
     <input class="auth-input" type="email" id="su-em" oninput="checkSU()" placeholder="vous@exemple.com"/>
-    <input class="auth-input" type="password" id="su-pw" oninput="checkPW();checkSU()" placeholder="Créez votre mot de passe (8 caractères minimum)"/>
+    <div style="position:relative">
+  <input class="auth-input" type="password" id="su-pw" oninput="checkPW();checkSU()" placeholder="Créez votre mot de passe (8 caractères minimum)" style="padding-right:2.8rem"/>
+  <span onclick="togglePwVisibility('su-pw',this)" style="position:absolute;right:1rem;top:50%;transform:translateY(-50%);cursor:pointer;font-size:1rem;color:var(--text-muted)">👁️</span>
+</div>
     <div class="pw-bars"><div class="pw-bar" id="pb1"></div><div class="pw-bar" id="pb2"></div><div class="pw-bar" id="pb3"></div><div class="pw-bar" id="pb4"></div></div>
 <div id="pw-label" style="font-family:var(--font-ui);font-size:0.6rem;letter-spacing:0.05em;margin:0.3rem 0 0.6rem;min-height:0.9rem"></div>
     <select class="auth-select" id="su-co" onchange="checkSU()">
@@ -548,8 +551,14 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:998;op
     <div style="font-size:3rem;margin:1.5rem 0 1rem">🔑</div>
     <div class="form-title" style="text-align:center" id="rp-title">Nouveau<br>mot de passe</div>
     <div class="form-sub" style="text-align:center" id="rp-sub">Choisissez un nouveau mot de passe pour votre compte.</div>
-    <input class="auth-input" type="password" id="rp-pw" oninput="checkRP()" placeholder="Nouveau mot de passe (8 caractères minimum)"/>
-    <input class="auth-input" type="password" id="rp-pw2" oninput="checkRP()" placeholder="Confirmez le mot de passe"/>
+    <div style="position:relative">
+  <input class="auth-input" type="password" id="rp-pw" oninput="checkRP()" placeholder="Nouveau mot de passe (8 caractères minimum)" style="padding-right:2.8rem"/>
+  <span onclick="togglePwVisibility('rp-pw',this)" style="position:absolute;right:1rem;top:50%;transform:translateY(-50%);cursor:pointer;font-size:1rem;color:var(--text-muted)">👁️</span>
+</div>
+    <div style="position:relative">
+  <input class="auth-input" type="password" id="rp-pw2" oninput="checkRP()" placeholder="Confirmez le mot de passe" style="padding-right:2.8rem"/>
+  <span onclick="togglePwVisibility('rp-pw2',this)" style="position:absolute;right:1rem;top:50%;transform:translateY(-50%);cursor:pointer;font-size:1rem;color:var(--text-muted)">👁️</span>
+</div>
     <button class="btn-main" id="rp-btn" disabled onclick="doResetPassword()"><span id="rp-cta">Mettre à jour le mot de passe</span></button>
   </div>
 </div>
