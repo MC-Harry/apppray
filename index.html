@@ -226,8 +226,8 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:998;op
 .anon-tog.on .tog-track{background:var(--gold)}
 .tog-thumb{position:absolute;top:3px;left:3px;width:14px;height:14px;border-radius:50%;background:white;transition:transform 0.2s var(--ease-spring)}
 .anon-tog.on .tog-thumb{transform:translateX(16px)}
-.tog-info{flex:1}.tog-title{font-family:var(--font-ui);font-size:0.68rem;font-weight:500;color:var(--text);margin-bottom:1px}
-.tog-sub{font-family:var(--font-ui);font-size:0.7rem;color:var(--text-muted)}
+.tog-info{flex:1}.tog-title{font-family:var(--font-ui);font-size:0.9rem;font-weight:500;color:var(--text);margin-bottom:1px}
+.tog-sub{font-family:var(--font-ui);font-size:0.85rem;color:var(--text-muted)}
 .m-submit{width:100%;background:var(--flame);border:none;color:white;font-family:var(--font-ui);font-size:0.72rem;font-weight:600;letter-spacing:0.18em;text-transform:uppercase;padding:1rem;cursor:pointer;transition:all 0.25s;margin-top:0.5rem}
 .m-submit:hover{background:var(--flame-deep)}.m-submit:disabled{opacity:0.35;cursor:not-allowed}
 /* EXPLORER */
@@ -1399,7 +1399,7 @@ function openPubM(){
         '<div class="m-field"><label class="m-lbl">'+t('ml_cat')+'</label><div class="m-cats">'+cats.map(function(c,i){return '<div class="m-cat'+(i===modalCat?' active':'')+'" onclick="setMCat('+i+')">'+c+'</div>';}).join('')+'</div></div>'+
         '<div class="m-field"><label class="m-lbl">'+t('ml_vis')+'</label><div class="m-opts"><div class="m-opt active" onclick="selMVis(this)"><span class="oi">🌍</span><span class="ol">'+t('ml_w')+'</span></div><div class="m-opt" onclick="selMVis(this)"><span class="oi">👥</span><span class="ol">'+t('ml_g')+'</span></div><div class="m-opt" onclick="selMVis(this)"><span class="oi">🔒</span><span class="ol">'+t('ml_p')+'</span></div></div></div>'+
         '<div class="anon-tog" id="anon-tog" onclick="toggleAnon()"><div class="tog-track"><div class="tog-thumb"></div></div><div class="tog-info"><div class="tog-title">'+t('ml_at')+'</div><div class="tog-sub">'+t('ml_as')+'</div></div><span style="font-size:0.8rem;color:var(--text-muted)">👤</span></div>'+
-        '<div class="m-field" style="display:flex;gap:0.5rem"><div class="pub-icon-btn" style="width:auto;flex:1;gap:0.5rem;font-size:0.85rem;letter-spacing:0.08em;font-family:var(--font-ui);color:var(--text-dim);padding:0 0.7rem;height:36px" onclick="showToast(\'🎤\',t(\'mic\'))">🎤 '+t('ml_voc')+'</div><div class="pub-icon-btn" style="width:auto;flex:1;gap:0.5rem;font-size:0.62rem;letter-spacing:0.08em;font-family:var(--font-ui);color:var(--text-dim);padding:0 0.7rem;height:36px" onclick="showToast(\'📷\',t(\'photo\'))">📷 '+t('ml_photo')+'</div></div>'+
+        '<div class="m-field" style="display:flex;gap:0.5rem"><div class="pub-icon-btn" style="width:auto;flex:1;gap:0.5rem;font-size:0.85rem;letter-spacing:0.08em;font-family:var(--font-ui);color:var(--text-dim);padding:0 0.7rem;height:36px" onclick="showToast(\'🎤\',t(\'mic\'))">🎤 '+t('ml_voc')+'</div><div class="pub-icon-btn" style="width:auto;flex:1;gap:0.5rem;font-size:0.85rem;letter-spacing:0.08em;font-family:var(--font-ui);color:var(--text-dim);padding:0 0.7rem;height:36px" onclick="showToast(\'📷\',t(\'photo\'))">📷 '+t('ml_photo')+'</div></div>'+
         '<button class="m-submit" id="pm-sub" disabled onclick="submitPrayer()">'+t('ml_sub')+'</button>'+
       '</div>'+
     '</div>'+
