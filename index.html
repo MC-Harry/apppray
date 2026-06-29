@@ -1372,6 +1372,7 @@ function togglePray(e,id){
   // Mettre à jour le compteur local
   var p=PRAYERS.find(function(x){return x.id===id;});
   if(p&&!currentUser) p.count=was?Math.max(0,p.count-1):p.count+1;
+  if(p&&currentUser&&p._real) p.count=was?Math.max(0,p.count-1):p.count;
   renderFeed();
   if(currentUser&&p&&p._real){
     setTimeout(async function(){
