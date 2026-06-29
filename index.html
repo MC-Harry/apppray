@@ -1344,7 +1344,7 @@ function cardHTML(p){
       '</div>'+
     '</div>'+
     '<div class="card-acts">'+
-      '<button class="act-btn act-pray'+(hp?' praying':'')+'" onclick="togglePray(event,'+p.id+')" style="position:relative">'+
+      '<button class="act-btn act-pray'+(hp?' praying':'')+'" onclick="togglePray(event,\''+p.id+'\')" style="position:relative">'+
         '<span class="ai">🙏</span><span class="ac">'+fmtN(cnt)+'</span><span class="al">'+(hp?t('prayed'):t('pray'))+'</span>'+
       '</button>'+
       '<div class="act-sep"></div>'+
