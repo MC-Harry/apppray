@@ -1373,6 +1373,12 @@ function togglePray(e,id){
   var p=PRAYERS.find(function(x){return x.id===id;});
   if(p) p.count=was?Math.max(0,p.count-1):p.count+1;
   renderFeed();
+  if(currentUser&&p&&p._real){
+    setTimeout(async function(){
+      var res=await supa.from('prayers').select('support_count').eq('id',id).single();
+      if(!res.error&&res.data){p.count=res.data.support_count;renderFeed();}
+    },1000);
+  }
 }
 function closeUB(){
   var el=document.getElementById('ub');if(!el)return;
