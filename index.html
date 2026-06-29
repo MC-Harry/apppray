@@ -1371,13 +1371,16 @@ function togglePray(e,id){
   }
   // Mettre à jour le compteur local
   var p=PRAYERS.find(function(x){return x.id===id;});
-  if(p) p.count=was?Math.max(0,p.count-1):p.count+1;
+  if(p&&!currentUser) p.count=was?Math.max(0,p.count-1):p.count+1;
   renderFeed();
   if(currentUser&&p&&p._real){
     setTimeout(async function(){
       var res=await supa.from('prayers').select('support_count').eq('id',id).single();
       if(!res.error&&res.data){p.count=res.data.support_count;renderFeed();}
-    },1000);
+    },1500);
+  } else {
+    if(p) p.count=was?Math.max(0,p.count-1):p.count+1;
+    renderFeed();
   }
 }
 function closeUB(){
