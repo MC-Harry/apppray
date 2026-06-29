@@ -2041,14 +2041,19 @@ async function loadUserSupports(){
 // Souscrire aux nouvelles prières en temps réel
 function subscribeToRealtime(){
   supa.channel('prayers_feed')
-    .on('postgres_changes',{event:'INSERT',schema:'public',table:'prayers'},function(payload){
+    .on('postgres_changes',{event:'INSERT',schema:'public',table:'prayers'},async function(payload){
       var p=payload.new;
       if(p.visibility!=='world') return;
       var alreadyExists=PRAYERS.some(function(x){return x.id===p.id;});
 if(alreadyExists) return;
+      var profile={display_name:'',avatar_letter:'?',avatar_color:'#C8102E',country:''};
+      try{
+        var pr=await supa.from('profiles').select('display_name,avatar_letter,avatar_color,country').eq('id',p.user_id).single();
+        if(!pr.error&&pr.data) profile=pr.data;
+      }catch(e){}
       var newP={
-        id:p.id,user:'Nouveau membre',anon:p.is_anonymous,flag:'🌍',loc:'',
-        av:'?',col:'#C8102E',
+        id:p.id,user:p.is_anonymous?null:(profile.display_name||'Utilisateur'),anon:p.is_anonymous,flag:'🌍',loc:profile.country||'',
+        av:p.is_anonymous?'?':(profile.avatar_letter||'?'),col:p.is_anonymous?'#374151':(profile.avatar_color||'#C8102E'),
         time:{fr:'a l instant',en:'just now'},
         title:{fr:p.title,en:p.title},
         body:{fr:p.body||'',en:p.body||''},
