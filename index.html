@@ -12,6 +12,8 @@
 const SUPA_URL = 'https://boaqhboeubgcfenimbwm.supabase.co';
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJvYXFoYm9ldWJnY2ZlbmltYndtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA5NTkzMjQsImV4cCI6MjA5NjUzNTMyNH0.QHCO5DAEmJBOmRvnIn0OHS34ImIM0vZ7g98elKPfX3Q';
 const supa = supabase.createClient(SUPA_URL, SUPA_KEY);
+const VAPID_PUBLIC_KEY = 'BDvvK0f_GyAX9d20MYukf7qZluHSMj3xu-mNccSFhpRMA8UMsSbsGqUZdfLqSASLHgitp16iI6APHK_RCZ6n0CI';
+var pushSubscribed = false;
 var currentUser = null;
 var currentProfile = null;
 </script>
@@ -984,6 +986,7 @@ function openSettings(){
       '<div style="font-family:var(--font-ui);font-size:0.72rem;color:var(--text-muted);padding:0.75rem 0;border-bottom:1px solid var(--border);margin-bottom:0.5rem">'+lbl_demo+'</div>'
     ),
     '<button id="s-lang-btn" class="m-submit" style="background:var(--surface);border:1px solid var(--border);color:var(--text-muted)">'+lbl_lang+'</button>',
+    '<button id="s-push-btn" class="m-submit" style="margin-top:0.5rem;background:var(--surface);border:1px solid var(--border-gold);color:var(--gold-light)" onclick="subscribeToPush()">'+(lang==='fr'?'🔔 Activer les notifications':'🔔 Enable notifications')+'</button>',
     isConn?'<button id="s-auth-btn" class="m-submit" style="margin-top:0.5rem;background:transparent;border:1px solid var(--border-flame);color:var(--flame)">'+lbl_logout+'</button>':
            '<button id="s-auth-btn" class="m-submit" style="margin-top:0.5rem">'+lbl_login+'</button>',
     '</div></div></div>'
@@ -1559,6 +1562,44 @@ function renderTestisExp(){
     }).join('')+
     '<div style="height:0.5rem"></div>';
 }
+/* ═══════ PUSH NOTIFICATIONS ═══════ */
+function isIOS(){return /iPad|iPhone|iPod/.test(navigator.userAgent);}
+function isStandalone(){return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone===true;}
+function urlB64ToUint8Array(base64String){
+  var padding='='.repeat((4-base64String.length%4)%4);
+  var base64=(base64String+padding).replace(/-/g,'+').replace(/_/g,'/');
+  var rawData=window.atob(base64);
+  var outputArray=new Uint8Array(rawData.length);
+  for(var i=0;i<rawData.length;++i){outputArray[i]=rawData.charCodeAt(i);}
+  return outputArray;
+}
+function registerSW(){
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.register('/sw.js').catch(function(e){console.warn('SW:',e);});
+  }
+}
+async function subscribeToPush(){
+  if(!currentUser){showToast('🔒',lang==='fr'?'Connecte-toi pour activer les notifications':'Log in to enable notifications');return;}
+  if(isIOS()&&!isStandalone()){
+    showToast('📲',lang==='fr'?'Ajoute AppPray à ton écran d\'accueil pour activer les notifications (Partager → Sur l\'écran d\'accueil)':'Add AppPray to your Home Screen first to enable notifications (Share → Add to Home Screen)');
+    return;
+  }
+  if(!('serviceWorker' in navigator)||!('PushManager' in window)){
+    showToast('⚠️',lang==='fr'?'Notifications non supportées sur ce navigateur':'Notifications not supported on this browser');
+    return;
+  }
+  try{
+    var perm=await Notification.requestPermission();
+    if(perm!=='granted'){showToast('🔕',lang==='fr'?'Permission refusée':'Permission denied');return;}
+    var reg=await navigator.serviceWorker.ready;
+    var sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:urlB64ToUint8Array(VAPID_PUBLIC_KEY)});
+    await supa.from('push_subscriptions').upsert({user_id:currentUser.id,subscription:sub.toJSON()},{onConflict:'user_id,subscription'});
+    pushSubscribed=true;
+    showToast('🔔',lang==='fr'?'Notifications activées':'Notifications enabled');
+    var btn=document.getElementById('s-push-btn');if(btn)btn.textContent=lang==='fr'?'✓ Notifications activées':'✓ Notifications enabled';
+  }catch(e){console.warn('Push subscribe:',e);showToast('⚠️',lang==='fr'?'Erreur d\'activation':'Activation error');}
+}
+
 /* ═══════ RENDEZ-VOUS DE PRIÈRE PROGRAMMÉ ═══════ */
 async function loadEvents(){
   try{
@@ -2260,6 +2301,7 @@ function checkPasswordRecovery(){
 }
 /* ═══════ INIT ═══════ */
 applyLang();
+registerSW();
 document.getElementById('fp-ta').placeholder=t('fp_ph');
 setTimeout(initPTR, 500);
 setTimeout(initFX, 200);
