@@ -2299,6 +2299,12 @@ function checkPasswordRecovery(){
   }
   return false;
 }
+function openRdvDeepLink(){
+  activeExpTab='events';
+  navTo('explore');
+  document.querySelectorAll('#p-explore .tab').forEach(function(t){t.classList.remove('active');});
+  var etr=document.getElementById('etr');if(etr)etr.classList.add('active');
+}
 /* ═══════ INIT ═══════ */
 applyLang();
 registerSW();
@@ -2313,7 +2319,11 @@ setTimeout(initFX, 200);
   if(hasSession && !isRecovery){
     showToast('🙏', lang==='fr'?'Reconnecté — bienvenue !':'Reconnected — welcome!');
     updateTopbarAvatar();
-    setTimeout(function(){ navTo('feed'); }, 300);
+    if(window.location.hash==='#rdv'){
+      setTimeout(function(){ openRdvDeepLink(); }, 300);
+    } else {
+      setTimeout(function(){ navTo('feed'); }, 300);
+    }
   }
 })();
 
