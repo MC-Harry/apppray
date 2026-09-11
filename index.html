@@ -1631,11 +1631,12 @@ function renderEvents(){
   s.innerHTML='<div style="padding:2rem;text-align:center;color:var(--text-muted);font-size:0.8rem">'+(lang==='fr'?'Chargement...':'Loading...')+'</div>';
   loadEvents().then(function(){
     if(!EVENTS.length){
-      s.innerHTML='<div style="padding:3rem 1rem;text-align:center;color:var(--text-muted)"><div style="font-size:2rem;margin-bottom:0.7rem;opacity:0.4">📅</div><div style="font-family:var(--font-display);font-style:italic;font-size:1rem;line-height:1.6">'+(lang==='fr'?'Aucun rendez-vous programmé pour le moment.':'No scheduled prayer moments yet.')+'</div></div>'+
-        rdvCreateBannerHTML();
+      s.innerHTML=rdvCreateBannerHTML()+
+        '<div style="padding:3rem 1rem;text-align:center;color:var(--text-muted)"><div style="font-size:2rem;margin-bottom:0.7rem;opacity:0.4">📅</div><div style="font-family:var(--font-display);font-style:italic;font-size:1rem;line-height:1.6">'+(lang==='fr'?'Aucun rendez-vous programmé pour le moment.':'No scheduled prayer moments yet.')+'</div></div>';
       return;
     }
-    s.innerHTML='<div class="sec-hdr"><span class="sec-ttl">'+(lang==='fr'?'Rendez-vous de prière':'Scheduled prayer moments')+'</span><span class="sec-cnt">'+EVENTS.length+'</span></div>'+
+    s.innerHTML=rdvCreateBannerHTML()+
+      '<div class="sec-hdr"><span class="sec-ttl">'+(lang==='fr'?'Rendez-vous de prière':'Scheduled prayer moments')+'</span><span class="sec-cnt">'+EVENTS.length+'</span></div>'+
       EVENTS.map(function(ev){
         var joined=rsvpedEventIds.has(ev.id);
         var prof=ev.profiles||{};
@@ -1653,7 +1654,6 @@ function renderEvents(){
           '</div>'+
         '</div>';
       }).join('')+
-      rdvCreateBannerHTML()+
       '<div style="height:0.5rem"></div>';
   });
 }
