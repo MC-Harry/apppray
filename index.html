@@ -1787,9 +1787,9 @@ function renderGrpTab(tab){var s=document.getElementById('grp-scroll');s.innerHT
 function renderMine(){
   var s=document.getElementById('grp-scroll');
   var mine=allGroups.filter(function(g){return joinedGroups.has(g.id);});
-  s.innerHTML=(mine.length?'<div class="sec-lbl">'+(lang==='fr'?'Mes communautés':'My communities')+'<span>'+mine.length+'</span></div>'+mine.map(function(g){return gcCardHTML(g,false);}).join(''):
+  s.innerHTML='<div class="create-banner" onclick="openCreateGrpM()"><div class="cb-icon">＋</div><div class="cb-ttl">'+t('cb_t')+'</div><div class="cb-desc">'+t('cb_d')+'</div></div>'+
+    (mine.length?'<div class="sec-lbl">'+(lang==='fr'?'Mes communautés':'My communities')+'<span>'+mine.length+'</span></div>'+mine.map(function(g){return gcCardHTML(g,false);}).join(''):
     '<div style="padding:3rem 1rem;text-align:center;color:var(--text-muted)"><div style="font-size:2rem;margin-bottom:0.7rem;opacity:0.4">👥</div><div style="font-family:var(--font-display);font-style:italic;font-size:1rem;line-height:1.6">'+(lang==='fr'?'Vous n\'avez pas encore de groupe.':'You don\'t have any groups yet.')+'</div></div>')+
-    '<div class="create-banner" onclick="openCreateGrpM()"><div class="cb-icon">＋</div><div class="cb-ttl">'+t('cb_t')+'</div><div class="cb-desc">'+t('cb_d')+'</div></div>'+
     '<div style="height:0.5rem"></div>';
 }
 function renderExpGrps(){
