@@ -705,6 +705,7 @@ Matthieu 18:19</div>
     <button class="tab" onclick="expTab('trends',this)" id="ett">Tendances</button>
     <button class="tab" onclick="expTab('chals',this)" id="etc">Challenges</button>
     <button class="tab" onclick="expTab('testis',this)" id="ette">Témoignages</button>
+    <button class="tab" onclick="expTab('events',this)" id="etr">Rendez-vous</button>
   </div>
   <div class="scroll-area" id="exp-scroll"></div>
   <nav class="bottom-nav">
@@ -816,6 +817,7 @@ Matthieu 18:19</div>
 /* ═══════ STATE ═══════ */
 var lang='fr',currentPage='splash',termsOk=false,obStep=1,fpOk=false;
 var anonOn=false,modalCat=0,donAmt=10,selEmoji='🙏';
+var EVENTS=[],rsvpedEventIds=new Set(),evModalCat=0,evVis='group',evGroupId=null,eventsLoaded=false;
 var prayedIds=new Set(),expandedIds=new Set();
 var activeCat='all',activeExpTab='monde',activeGrpTab='mine',activeProTab='prayers';
 var joinedGroups=new Set([1,2,3]),dismissedInvites=new Set(),joinedChallenges=new Set();
@@ -1497,7 +1499,7 @@ var TESTIS_EXP=[{av:'P',col:'#1D4ED8',name:'Pastor Emmanuel N.',flag:'🇳🇬',
 var INTERS=[{av:'H',col:'#B91C1C',nm:'Harry MC',ct:'1.2k',on:true,g:true},{av:'P',col:'#1D4ED8',nm:'Pastor E.',ct:'847',on:true,g:true},{av:'S',col:'#7C3AED',nm:'Sister A.',ct:'634',on:false,g:false},{av:'M',col:'#065F46',nm:'Marie-C.',ct:'521',on:true,g:false},{av:'J',col:'#92400E',nm:'Jean-B.',ct:'312',on:false,g:false},{av:'L',col:'#065F46',nm:'Lydia M.',ct:'298',on:true,g:false}];
 
 function expTab(tab,btn){document.querySelectorAll('#p-explore .tab').forEach(function(t){t.classList.remove('active');});btn.classList.add('active');activeExpTab=tab;renderExpTab(tab);}
-function renderExpTab(tab){var s=document.getElementById('exp-scroll');s.innerHTML='';setTimeout(function(){if(tab==='monde')renderMonde();else if(tab==='trends')renderTrends();else if(tab==='chals')renderChals();else renderTestisExp();},20);}
+function renderExpTab(tab){var s=document.getElementById('exp-scroll');s.innerHTML='';setTimeout(function(){if(tab==='monde')renderMonde();else if(tab==='trends')renderTrends();else if(tab==='chals')renderChals();else if(tab==='events')renderEvents();else renderTestisExp();},20);}
 
 function renderMonde(){
   var s=document.getElementById('exp-scroll');
@@ -1550,6 +1552,153 @@ function renderTestisExp(){
       return '<div class="te-card"><div class="te-hdr"><div class="te-av" style="background:'+te.col+'">'+te.av+'</div><div style="flex:1"><div class="te-nm">'+te.name+'</div><div class="te-mt"><span style="font-size:0.8rem">'+te.flag+'</span><span style="font-family:var(--font-ui);font-size:0.55rem;color:var(--text-muted)">'+te.time[lang]+'</span></div></div><span class="te-badge">✨ '+t('ans_b')+'</span></div><div class="te-ttl">'+te.title[lang]+'</div><div class="te-body">'+te.body[lang]+'</div><div class="te-reacts">'+[['🙌',te.r[0]],['❤️',te.r[1]],['🙏',te.r[2]]].map(function(r){return '<button class="te-r" onclick="this.style.color=\'var(--gold)\';showToast(\'🙏\',t(\'toast_te\'))">'+r[0]+' <span>'+r[1]+'</span></button>';}).join('')+'</div></div>';
     }).join('')+
     '<div style="height:0.5rem"></div>';
+}
+/* ═══════ RENDEZ-VOUS DE PRIÈRE PROGRAMMÉ ═══════ */
+async function loadEvents(){
+  try{
+    var res=await supa.from('prayer_events')
+      .select('*, profiles(display_name,avatar_letter,avatar_color)')
+      .eq('status','approved')
+      .gte('scheduled_at',new Date(Date.now()-3600000).toISOString())
+      .order('scheduled_at',{ascending:true})
+      .limit(50);
+    if(res.error||!res.data) return false;
+    EVENTS=res.data.filter(function(e){return e.visibility==='world'||joinedGroups.has(e.group_id);});
+    if(currentUser){
+      var r=await supa.from('event_rsvps').select('event_id').eq('user_id',currentUser.id);
+      if(!r.error&&r.data) r.data.forEach(function(x){rsvpedEventIds.add(x.event_id);});
+    }
+    eventsLoaded=true;
+    return true;
+  }catch(e){console.warn('Chargement rendez-vous:',e);return false;}
+}
+function fmtEventDate(iso){
+  var d=new Date(iso);
+  var days_fr=['dim','lun','mar','mer','jeu','ven','sam'],days_en=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  var dn=lang==='fr'?days_fr[d.getDay()]:days_en[d.getDay()];
+  var hh=String(d.getHours()).padStart(2,'0'),mm=String(d.getMinutes()).padStart(2,'0');
+  return dn+' '+d.getDate()+'/'+(d.getMonth()+1)+' · '+hh+'h'+mm;
+}
+function renderEvents(){
+  var s=document.getElementById('exp-scroll');
+  s.innerHTML='<div style="padding:2rem;text-align:center;color:var(--text-muted);font-size:0.8rem">'+(lang==='fr'?'Chargement...':'Loading...')+'</div>';
+  loadEvents().then(function(){
+    if(!EVENTS.length){
+      s.innerHTML='<div style="padding:3rem 1rem;text-align:center;color:var(--text-muted)"><div style="font-size:2rem;margin-bottom:0.7rem;opacity:0.4">📅</div><div style="font-family:var(--font-display);font-style:italic;font-size:1rem;line-height:1.6">'+(lang==='fr'?'Aucun rendez-vous programmé pour le moment.':'No scheduled prayer moments yet.')+'</div></div>'+
+        rdvCreateBannerHTML();
+      return;
+    }
+    s.innerHTML='<div class="sec-hdr"><span class="sec-ttl">'+(lang==='fr'?'Rendez-vous de prière':'Scheduled prayer moments')+'</span><span class="sec-cnt">'+EVENTS.length+'</span></div>'+
+      EVENTS.map(function(ev){
+        var joined=rsvpedEventIds.has(ev.id);
+        var prof=ev.profiles||{};
+        var scopeLbl=ev.visibility==='world'?(lang==='fr'?'🌍 Monde':'🌍 World'):('👥 '+(ev.group_name||(lang==='fr'?'Groupe':'Group')));
+        return '<div style="background:var(--abyss);border:1px solid var(--border);border-radius:10px;padding:1rem;margin-bottom:0.6rem">'+
+          '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:0.6rem;margin-bottom:0.5rem">'+
+            '<div style="font-family:var(--font-ui);font-size:0.65rem;letter-spacing:0.08em;color:var(--gold);text-transform:uppercase">'+fmtEventDate(ev.scheduled_at)+'</div>'+
+            '<div style="font-family:var(--font-ui);font-size:0.62rem;color:var(--text-muted)">'+scopeLbl+'</div>'+
+          '</div>'+
+          '<div style="font-family:var(--font-ui);font-weight:500;font-size:1rem;color:var(--text);margin-bottom:0.3rem">'+ev.title+'</div>'+
+          (ev.description?'<div style="font-family:var(--font-ui);font-size:0.78rem;color:var(--text-dim);line-height:1.5;margin-bottom:0.6rem">'+ev.description+'</div>':'')+
+          '<div style="display:flex;justify-content:space-between;align-items:center">'+
+            '<span style="font-family:var(--font-ui);font-size:0.68rem;color:var(--text-muted)">🙏 '+(ev.rsvp_count||0)+' '+(lang==='fr'?'participants':'joining')+'</span>'+
+            '<button onclick="toggleRSVP(\''+ev.id+'\')" style="font-family:var(--font-ui);font-size:0.7rem;letter-spacing:0.06em;padding:0.4rem 0.8rem;border-radius:20px;border:1px solid '+(joined?'var(--gold)':'var(--border)')+';background:'+(joined?'var(--gold-glow)':'transparent')+';color:'+(joined?'var(--gold-light)':'var(--text-dim)')+';cursor:pointer">'+(joined?(lang==='fr'?'✓ Je serai en prière':'✓ I\'ll be praying'):(lang==='fr'?'Je serai en prière':'I\'ll be praying'))+'</button>'+
+          '</div>'+
+        '</div>';
+      }).join('')+
+      rdvCreateBannerHTML()+
+      '<div style="height:0.5rem"></div>';
+  });
+}
+function rdvCreateBannerHTML(){
+  return '<div class="create-banner" onclick="openEventM()"><div class="cb-icon">＋</div><div class="cb-ttl">'+(lang==='fr'?'Créer un rendez-vous':'Create a prayer moment')+'</div><div class="cb-desc">'+(lang==='fr'?'Proposez un moment de prière collective à une date précise':'Propose a collective prayer moment at a specific date')+'</div></div>';
+}
+async function toggleRSVP(id){
+  if(!currentUser){showToast('🔒',lang==='fr'?'Connecte-toi pour participer':'Log in to join');return;}
+  var joined=rsvpedEventIds.has(id);
+  var ev=EVENTS.find(function(e){return e.id===id;});
+  try{
+    if(joined){
+      await supa.from('event_rsvps').delete().eq('event_id',id).eq('user_id',currentUser.id);
+      rsvpedEventIds.delete(id);
+      if(ev)ev.rsvp_count=Math.max(0,(ev.rsvp_count||1)-1);
+    } else {
+      await supa.from('event_rsvps').insert({event_id:id,user_id:currentUser.id});
+      rsvpedEventIds.add(id);
+      if(ev)ev.rsvp_count=(ev.rsvp_count||0)+1;
+      showToast('🙏',lang==='fr'?'Rendez-vous ajouté':'Added to your moments');
+    }
+    await supa.from('prayer_events').update({rsvp_count:ev?ev.rsvp_count:0}).eq('id',id);
+    renderEvents();
+  }catch(e){console.warn('RSVP:',e);showToast('⚠️',lang==='fr'?'Erreur':'Error');}
+}
+function openEventM(){
+  if(!currentUser){showToast('🔒',lang==='fr'?'Connecte-toi pour créer un rendez-vous':'Log in to create a prayer moment');return;}
+  var cats=CM[lang];
+  evVis='group';evGroupId=(allGroups[0]?allGroups[0].id:null);evModalCat=0;
+  var grpOpts=allGroups.map(function(g){return '<option value="'+g.id+'">'+g.emoji+' '+g.name+'</option>';}).join('');
+  var html='<div class="modal-ov" onclick="closeMod(event,\'ev-m\')"><div class="modal" onclick="event.stopPropagation()">'+
+    '<div class="modal-handle"></div>'+
+    '<div class="modal-head"><div class="modal-title">'+(lang==='fr'?'Nouveau rendez-vous':'New prayer moment')+'</div><div class="modal-sub">'+(lang==='fr'?'Un moment de prière collective, à une date précise':'A collective prayer moment, at a set date')+'</div></div>'+
+    '<div class="modal-body">'+
+      '<div class="m-field"><label class="m-lbl">'+(lang==='fr'?'Titre':'Title')+'</label><input class="m-inp" id="ev-ttl" type="text" maxlength="80" oninput="checkEV()" placeholder="'+(lang==='fr'?'Ex: Prière pour la rentrée scolaire':'E.g: Prayer for the school year')+'"/></div>'+
+      '<div class="m-field"><label class="m-lbl">'+(lang==='fr'?'Description (optionnel)':'Description (optional)')+'</label><textarea class="m-ta" id="ev-desc" rows="2" placeholder="'+(lang==='fr'?'Précisez le sujet...':'Add details...')+'"></textarea></div>'+
+      '<div class="m-field" style="display:flex;gap:0.5rem">'+
+        '<div style="flex:1"><label class="m-lbl">'+(lang==='fr'?'Date':'Date')+'</label><input class="m-inp" id="ev-date" type="date" oninput="checkEV()"/></div>'+
+        '<div style="flex:1"><label class="m-lbl">'+(lang==='fr'?'Heure':'Time')+'</label><input class="m-inp" id="ev-time" type="time" oninput="checkEV()"/></div>'+
+      '</div>'+
+      '<div class="m-field"><label class="m-lbl">'+(lang==='fr'?'Catégorie':'Category')+'</label><div class="m-cats">'+cats.map(function(c,i){return '<div class="m-cat'+(i===evModalCat?' active':'')+'" onclick="setEvCat('+i+')">'+c+'</div>';}).join('')+'</div></div>'+
+      '<div class="m-field"><label class="m-lbl">'+(lang==='fr'?'Visibilité':'Visibility')+'</label><div class="m-opts"><div class="m-opt active" onclick="selEvVis(this,\'group\')"><span class="oi">👥</span><span class="ol">'+(lang==='fr'?'Groupe':'Group')+'</span></div><div class="m-opt" onclick="selEvVis(this,\'world\')"><span class="oi">🌍</span><span class="ol">'+(lang==='fr'?'Monde':'World')+'</span></div></div></div>'+
+      '<div class="m-field" id="ev-grp-wrap"><label class="m-lbl">'+(lang==='fr'?'Quel groupe ?':'Which group?')+'</label><select class="m-inp" id="ev-grp" onchange="evGroupId=this.value">'+(grpOpts||'<option value="">'+(lang==='fr'?'Aucun groupe':'No group')+'</option>')+'</select></div>'+
+      '<div class="m-field" id="ev-world-note" style="display:none"><div style="font-family:var(--font-ui);font-size:0.7rem;color:var(--text-muted);line-height:1.5;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:0.6rem">'+(lang==='fr'?'⚠️ Les rendez-vous à portée mondiale sont revus avant publication dans Explorer.':'⚠️ World-visibility moments are reviewed before appearing in Explorer.')+'</div></div>'+
+      '<button class="m-submit" id="ev-sub" disabled onclick="submitEvent()">'+(lang==='fr'?'Programmer ce rendez-vous':'Schedule this moment')+'</button>'+
+    '</div></div></div>';
+  document.getElementById('modals').innerHTML='<div id="ev-m">'+html+'</div>';
+  document.body.style.overflow='hidden';
+}
+function selEvVis(el,v){document.querySelectorAll('#ev-m .m-opt').forEach(function(o){o.classList.remove('active');});el.classList.add('active');evVis=v;
+  document.getElementById('ev-grp-wrap').style.display=(v==='group')?'':'none';
+  document.getElementById('ev-world-note').style.display=(v==='world')?'':'none';
+}
+function setEvCat(i){evModalCat=i;document.querySelectorAll('#ev-m .m-cat').forEach(function(c,idx){c.classList.toggle('active',idx===i);});}
+function checkEV(){
+  var ttl=document.getElementById('ev-ttl').value.trim();
+  var dt=document.getElementById('ev-date').value,tm=document.getElementById('ev-time').value;
+  document.getElementById('ev-sub').disabled=!(ttl.length>=3&&dt&&tm);
+}
+async function submitEvent(){
+  var title=document.getElementById('ev-ttl').value.trim();
+  var desc=document.getElementById('ev-desc').value.trim();
+  var dt=document.getElementById('ev-date').value,tm=document.getElementById('ev-time').value;
+  if(!title||!dt||!tm)return;
+  var scheduledAt=new Date(dt+'T'+tm).toISOString();
+  var catKey=CK[evModalCat+1]||'other';
+  var grp=evVis==='group'?allGroups.find(function(g){return String(g.id)===String(evGroupId);}):null;
+  var btn=document.getElementById('ev-sub');btn.disabled=true;btn.textContent='...';
+  try{
+    var insData={
+      user_id:currentUser.id,
+      title:title,
+      description:desc||'',
+      category:catKey,
+      scheduled_at:scheduledAt,
+      visibility:evVis,
+      group_id:grp?String(grp.id):null,
+      group_name:grp?grp.name:null,
+      status:'approved',
+      rsvp_count:0
+    };
+    var res=await supa.from('prayer_events').insert(insData).select().single();
+    if(res.error)throw res.error;
+    var em=document.getElementById('ev-m');if(em)em.remove();
+    document.body.style.overflow='';
+    showToast('📅',lang==='fr'?'Rendez-vous programmé':'Prayer moment scheduled');
+    renderEvents();
+  }catch(err){
+    console.error('Erreur rendez-vous:',err);
+    showToast('⚠️',lang==='fr'?'Erreur de création':'Creation error');
+    btn.disabled=false;btn.textContent=lang==='fr'?'Programmer ce rendez-vous':'Schedule this moment';
+  }
 }
 function handleSearch(el){var v=el.value;document.getElementById('s-clr').classList.toggle('on',v.length>0);if(v.length>1)showToast('🔍',lang==='fr'?'Recherche en cours...':'Searching...');}
 function clearSearch(){document.getElementById('s-inp').value='';document.getElementById('s-clr').classList.remove('on');}
