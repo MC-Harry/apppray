@@ -31,7 +31,7 @@ jobs:
               await fetch(process.env.SUPA_URL + "/functions/v1/send-push", {
                 method: "POST",
                 headers: { "Content-Type": "application/json", Authorization: "Bearer " + process.env.SERVICE_KEY },
-                body: JSON.stringify({ user_ids: userIds, title: "🙏 " + ev.title, body: "Ton rendez-vous de prière commence bientôt", url: "https://apppray.vercel.app" })
+                body: JSON.stringify({ user_ids: userIds, title: "🙏 " + ev.title, body: "Ton rendez-vous de prière commence bientôt", url: "https://apppray.vercel.app/#rdv" })
               });
             }
             await fetch(process.env.SUPA_URL + "/rest/v1/prayer_events?id=eq." + ev.id, {
