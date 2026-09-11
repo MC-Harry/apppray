@@ -1557,7 +1557,7 @@ function renderTestisExp(){
 async function loadEvents(){
   try{
     var res=await supa.from('prayer_events')
-      .select('*, profiles(display_name,avatar_letter,avatar_color)')
+      .select('*')
       .eq('status','approved')
       .gte('scheduled_at',new Date(Date.now()-3600000).toISOString())
       .order('scheduled_at',{ascending:true})
