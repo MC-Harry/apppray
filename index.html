@@ -1563,7 +1563,7 @@ async function loadEvents(){
       .order('scheduled_at',{ascending:true})
       .limit(50);
     if(res.error||!res.data) return false;
-    EVENTS=res.data.filter(function(e){return e.visibility==='world'||joinedGroups.has(e.group_id);});
+    EVENTS=res.data.filter(function(e){return e.visibility==='world'||joinedGroups.has(Number(e.group_id));});
     if(currentUser){
       var r=await supa.from('event_rsvps').select('event_id').eq('user_id',currentUser.id);
       if(!r.error&&r.data) r.data.forEach(function(x){rsvpedEventIds.add(x.event_id);});
