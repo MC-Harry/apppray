@@ -199,7 +199,10 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:998;op
 /* MODAL */
 .modal-ov{position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:500;display:flex;align-items:flex-end;animation:mfade 0.25s ease}
 @keyframes mfade{from{opacity:0}to{opacity:1}}
-.modal{background:var(--deep);border-top:1px solid var(--border-hi);width:100%;max-width:480px;margin:0 auto;padding:0 0 2.5rem;max-height:92vh;overflow-y:auto;animation:mslide 0.35s cubic-bezier(0.4,0,0.2,1)}
+.modal{background:var(--deep);border-top:1px solid var(--border-hi);width:100%;max-width:480px;margin:0 auto;padding:0 0 2.5rem;max-height:92vh;overflow-y:auto;animation:mslide 0.35s cubic-bezier(0.4,0,0.2,1);position:relative}
+.modal-close{position:absolute;top:0.9rem;right:1rem;width:32px;height:32px;border-radius:50%;background:var(--surface);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:0.95rem;color:var(--text-dim);cursor:pointer;z-index:5;transition:all 0.2s}
+.modal-close:hover{color:var(--flame);border-color:var(--border-flame)}
+.modal-handle{cursor:pointer}
 @keyframes mslide{from{transform:translateY(100%)}to{transform:translateY(0)}}
 .modal-handle{width:40px;height:4px;background:var(--lift2);border-radius:2px;margin:1rem auto 1.4rem}
 .modal-head{padding:0 1rem 1rem;border-bottom:1px solid var(--border);margin-bottom:1.2rem}
@@ -968,7 +971,8 @@ function openSettings(){
   el.innerHTML=[
     '<div class="modal-ov" id="set-ov">',
     '<div class="modal" style="padding-bottom:2rem">',
-    '<div class="modal-handle"></div>',
+    '<div class="modal-handle" onclick="closeModDirect(\'set-m\')"></div>',
+    '<div class="modal-close" onclick="closeModDirect(\'set-m\')">✕</div>',
     '<div class="modal-head"><div class="modal-title">'+lbl_settings+'</div></div>',
     '<div class="modal-body">',
     isConn?(
@@ -1404,7 +1408,8 @@ function openPubM(){
   var cats=CM[lang];
   var html='<div class="modal-ov" onclick="closeMod(event,\'pub-m\')">'+
     '<div class="modal" onclick="event.stopPropagation()">'+
-      '<div class="modal-handle"></div>'+
+      '<div class="modal-handle" onclick="closeModDirect(\'pub-m\')"></div>'+
+      '<div class="modal-close" onclick="closeModDirect(\'pub-m\')">✕</div>'+
       '<div class="modal-head"><div class="modal-title">'+t('new_prayer')+'</div><div class="modal-sub">'+t('pub_sub')+'</div></div>'+
       '<div class="modal-body">'+
         '<div class="m-field"><label class="m-lbl">'+t('ml_ttl')+'</label><input class="m-inp" id="pm-ttl" type="text" maxlength="80" oninput="checkPM()" placeholder="'+(lang==='fr'?'Ex: Guérison de mon père...':'E.g: Healing for my father...')+'"/><div class="char-hint" id="pm-ch">0 / 80</div></div>'+
@@ -1422,6 +1427,7 @@ function openPubM(){
   if(anonOn){setTimeout(function(){var at=document.getElementById('anon-tog');if(at)at.classList.add('on');},50);}
 }
 function closeMod(e,id){if(e&&!e.target.classList.contains('modal-ov'))return;var el=document.getElementById(id);if(el)el.remove();document.body.style.overflow='';}
+function closeModDirect(id){var el=document.getElementById(id);if(el)el.remove();document.body.style.overflow='';}
 function setMCat(i){modalCat=i;document.querySelectorAll('.m-cat').forEach(function(c,idx){c.classList.toggle('active',idx===i);});}
 function selMVis(el){document.querySelectorAll('.m-opt').forEach(function(o){o.classList.remove('active');});el.classList.add('active');}
 function toggleAnon(){anonOn=!anonOn;var at=document.getElementById('anon-tog');if(at)at.classList.toggle('on',anonOn);}
@@ -1638,7 +1644,8 @@ function openEventM(){
   evVis='group';evGroupId=(allGroups[0]?allGroups[0].id:null);evModalCat=0;
   var grpOpts=allGroups.map(function(g){return '<option value="'+g.id+'">'+g.emoji+' '+g.name+'</option>';}).join('');
   var html='<div class="modal-ov" onclick="closeMod(event,\'ev-m\')"><div class="modal" onclick="event.stopPropagation()">'+
-    '<div class="modal-handle"></div>'+
+    '<div class="modal-handle" onclick="closeModDirect(\'ev-m\')"></div>'+
+    '<div class="modal-close" onclick="closeModDirect(\'ev-m\')">✕</div>'+
     '<div class="modal-head"><div class="modal-title">'+(lang==='fr'?'Nouveau rendez-vous':'New prayer moment')+'</div><div class="modal-sub">'+(lang==='fr'?'Un moment de prière collective, à une date précise':'A collective prayer moment, at a set date')+'</div></div>'+
     '<div class="modal-body">'+
       '<div class="m-field"><label class="m-lbl">'+(lang==='fr'?'Titre':'Title')+'</label><input class="m-inp" id="ev-ttl" type="text" maxlength="80" oninput="checkEV()" placeholder="'+(lang==='fr'?'Ex: Prière pour la rentrée scolaire':'E.g: Prayer for the school year')+'"/></div>'+
@@ -1781,7 +1788,8 @@ function openCreateGrpM(){
   var types_en=['🙏 Prayer','⛪ Church','🏠 Family','🌍 Mission','🔥 Youth','⚔️ Intercession'];
   var types=lang==='fr'?types_fr:types_en;
   var html='<div class="modal-ov" onclick="closeMod(event,\'cg-m\')"><div class="modal" onclick="event.stopPropagation()">'+
-    '<div class="modal-handle"></div>'+
+    '<div class="modal-handle" onclick="closeModDirect(\'cg-m\')"></div>'+
+    '<div class="modal-close" onclick="closeModDirect(\'cg-m\')">✕</div>'+
     '<div class="modal-head"><div class="modal-title">'+t('cg_ttl')+'</div><div class="modal-sub">'+t('cg_sub')+'</div></div>'+
     '<div class="modal-body">'+
       '<div class="m-field"><label class="m-lbl">'+(lang==='fr'?'Icône du groupe':'Group icon')+'</label><div class="emoji-grid">'+['🙏','⛪','🌍','🔥','✝️','🏠','📖','🕊️','⚔️','🌱'].map(function(e,i){return '<div class="emoji-opt'+(i===0?' sel':'')+'" onclick="selEm(this)">'+e+'</div>';}).join('')+'</div></div>'+
@@ -1872,7 +1880,8 @@ function renderJourney(){
 /* ═══════ EDIT PROFIL MODAL ═══════ */
 function openEditProM(){
   var html='<div class="modal-ov" onclick="closeMod(event,\'ep-m\')"><div class="modal" onclick="event.stopPropagation()">'+
-    '<div class="modal-handle"></div>'+
+    '<div class="modal-handle" onclick="closeModDirect(\'ep-m\')"></div>'+
+    '<div class="modal-close" onclick="closeModDirect(\'ep-m\')">✕</div>'+
     '<div class="modal-head"><div class="modal-title">'+t('em_t')+'</div></div>'+
     '<div class="modal-body">'+
       '<div class="m-field"><label class="m-lbl">'+t('em_nm')+'</label><input class="m-inp" id="ep-nm" type="text" value="Harry MC-Harry"/></div>'+
@@ -1905,7 +1914,8 @@ function openDonM(){
   var amts=[5,10,20,50,100,null];
   var lbls=['dl_co','dl_me','dl_su','dl_pa','dl_vi','dl_fr'];
   var html='<div class="modal-ov" onclick="closeMod(event,\'don-m\')"><div class="modal" onclick="event.stopPropagation()">'+
-    '<div class="modal-handle"></div>'+
+    '<div class="modal-handle" onclick="closeModDirect(\'don-m\')"></div>'+
+    '<div class="modal-close" onclick="closeModDirect(\'don-m\')">✕</div>'+
     '<div class="modal-head"><div class="modal-title">'+t('dm_t')+'</div></div>'+
     '<div class="modal-body">'+
       '<div class="don-amts">'+amts.map(function(a,i){return '<div class="don-amt'+(a===10?' sel':'')+'" onclick="selDon(this,'+a+')">'+
