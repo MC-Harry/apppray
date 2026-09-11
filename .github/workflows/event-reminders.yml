@@ -1,0 +1,50 @@
+name: AppPray Event Reminders
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+
+jobs:
+  remind:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check upcoming events and send reminders
+        run: |
+          curl -s "${{ secrets.SUPABASE_URL }}/rest/v1/prayer_events?select=id,title,scheduled_at&status=eq.approved&reminded=eq.false&scheduled_at=gte.$(date -u +%Y-%m-%dT%H:%M:%S)&scheduled_at=lte.$(date -u -d '+60 minutes' +%Y-%m-%dT%H:%M:%S)" \
+            -H "apikey: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" > events.json
+
+          echo "Événements à rappeler :"
+          cat events.json
+
+          node -e '
+          const events = JSON.parse(require("fs").readFileSync("events.json", "utf8"));
+
+          async function processEvent(ev) {
+            const rsvpRes = await fetch(process.env.SUPA_URL + "/rest/v1/event_rsvps?select=user_id&event_id=eq." + ev.id, {
+              headers: { apikey: process.env.SERVICE_KEY, Authorization: "Bearer " + process.env.SERVICE_KEY }
+            });
+            const rsvps = await rsvpRes.json();
+            const userIds = rsvps.map(r => r.user_id);
+            if (userIds.length > 0) {
+              await fetch(process.env.SUPA_URL + "/functions/v1/send-push", {
+                method: "POST",
+                headers: { "Content-Type": "application/json", Authorization: "Bearer " + process.env.SERVICE_KEY },
+                body: JSON.stringify({ user_ids: userIds, title: "🙏 " + ev.title, body: "Ton rendez-vous de prière commence bientôt", url: "https://apppray.vercel.app" })
+              });
+            }
+            await fetch(process.env.SUPA_URL + "/rest/v1/prayer_events?id=eq." + ev.id, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json", apikey: process.env.SERVICE_KEY, Authorization: "Bearer " + process.env.SERVICE_KEY, Prefer: "return=minimal" },
+              body: JSON.stringify({ reminded: true })
+            });
+          }
+
+          (async () => {
+            for (const ev of events) { await processEvent(ev); }
+          })();
+          '
+        env:
+          SUPA_URL: ${{ secrets.SUPABASE_URL }}
+          SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
