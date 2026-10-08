@@ -639,6 +639,7 @@ Matthieu 18:19</div>
       <div class="ob-emoji">✍️</div>
       <div class="ob-title">Votre<br><span class="ac">première</span> prière</div>
       <div class="ob-body" id="ob4-body" style="margin-bottom:0.75rem">Partagez ce qui est sur votre cœur — la communauté prie avec vous dès maintenant.</div>
+      <input class="m-inp" id="fp-ttl" type="text" maxlength="80" oninput="checkFP()" style="margin-bottom:0.6rem;border-left:3px solid var(--flame)"/>
       <div class="prayer-area"><textarea class="prayer-ta" id="fp-ta" maxlength="280" oninput="checkFP()"></textarea><div class="prayer-char"><span id="fp-cnt">0</span>/280</div></div>
       <div class="vis-opts">
         <div class="vis-opt active" onclick="selVis(this)"><span class="vi">🌍</span><span class="vl" id="vl-w">Monde</span></div>
@@ -847,7 +848,7 @@ ob1:'Tu rejoins des milliers de croyants du monde entier qui prient ensemble.',o
 ob3:'Quels sujets vous tiennent à cœur ? Votre feed sera personnalisé.',ob4:'Partagez ce qui est sur votre cœur — la communauté prie avec vous.',
 ob_live:'2 847 personnes prient à travers le monde',ob_ans:'147 prières exaucées partagées cette semaine',
 ob_tl:'Mon heure de prière',ob_next:['Continuer →','Continuer →','Continuer →','Publier ma première prière 🙏'],ob_skip:'Passer cette étape',
-vl_w:'Monde',vl_g:'Groupes',vl_p:'Privé',vl_a:'Anonyme',fp_ph:'Seigneur, je Te confie...',
+vl_w:'Monde',vl_g:'Groupes',vl_p:'Privé',vl_a:'Anonyme',fp_ph:'Seigneur, je Te confie... (facultatif)',fp_ttl_ph:'Titre de votre prière (ex : Guérison de mon père)',
 feed:'Feed',explore:'Explorer',groups:'Groupes',profile:'Profil',
 praying:'personnes prient',praying_1:'personne prie',have_prayed:'ont prié',have_prayed_1:'a prié',pray:'Je prie',prayed:'On prie',replies:'Réponses',share:'Partager',
 read_more:'Lire plus',collapse:'Réduire',
@@ -909,7 +910,7 @@ ob1:'You\'re joining thousands of believers worldwide who pray together.',ob2:'C
 ob3:'Which topics matter most? Your feed will be personalized.',ob4:'Share what\'s on your heart — the community prays with you now.',
 ob_live:'2,847 people praying around the world',ob_ans:'147 answered prayers shared this week',
 ob_tl:'My prayer time',ob_next:['Continue →','Continue →','Continue →','Publish my first prayer 🙏'],ob_skip:'Skip this step',
-vl_w:'World',vl_g:'Groups',vl_p:'Private',vl_a:'Anonymous',fp_ph:'Lord, I entrust You with...',
+vl_w:'World',vl_g:'Groups',vl_p:'Private',vl_a:'Anonymous',fp_ph:'Lord, I entrust You with... (optional)',fp_ttl_ph:'Prayer title (e.g. Healing for my father)',
 feed:'Feed',explore:'Explore',groups:'Groups',profile:'Profile',
 praying:'people praying',praying_1:'person praying',have_prayed:'prayed',have_prayed_1:'prayed',pray:'Praying',prayed:'We pray',replies:'Replies',share:'Share',
 read_more:'Read more',collapse:'Collapse',
@@ -1090,7 +1091,7 @@ function applyLang(){
   setTxt('ob-live',t('ob_live'));setTxt('ob-ans',t('ob_ans'));setTxt('ob2-tl',t('ob_tl'));
   setTxt('ob-next',t('ob_next')[obStep-1]);setTxt('ob-skip',t('ob_skip'));
   setTxt('vl-w',t('vl_w'));setTxt('vl-g',t('vl_g'));setTxt('vl-p',t('vl_p'));setTxt('vl-a',t('vl_a'));
-  var fpta=document.getElementById('fp-ta');if(fpta)fpta.placeholder=t('fp_ph');
+  var fpta=document.getElementById('fp-ta');if(fpta)fpta.placeholder=t('fp_ph');var fptt=document.getElementById('fp-ttl');if(fptt)fptt.placeholder=t('fp_ttl_ph');
   setTxt('ub-txt',t('ub'));setTxt('pub-ph',t('pub_ph'));setTxt('feed-ttl',t('feed_ttl'));setTxt('live-lbl',t('praying'));setTxt('ptr-txt',t('ptr'));
   setTxt('etm',t('tab_m'));setTxt('ett',t('tab_t'));setTxt('etc',t('tab_c'));setTxt('ette',t('tab_te'));
   var si=document.getElementById('s-inp');if(si)si.placeholder=t('s_ph');
@@ -1358,8 +1359,9 @@ function nextOb(){
   obStep++;updateOb();
 }
 async function publishFirstPrayer(){
+  var title=document.getElementById('fp-ttl').value.trim();
   var text=document.getElementById('fp-ta').value.trim();
-  if(text.length<5)return;
+  if(title.length<3)return;
   // Mode démo (pas de compte) : comportement d'origine
   if(!currentUser){
     showToast('🙏',lang==='fr'?'Prière publiée — bienvenue !':'Prayer published — welcome!');
@@ -1372,13 +1374,11 @@ async function publishFirstPrayer(){
   var idx=Math.max(0,opts.findIndex(function(o){return o.classList.contains('active');}));
   var vis=['world','groups','private','world'][idx];
   var anon=(idx===3);
-  // Titre = début du texte (80 caractères max), texte complet dans le corps
-  var title=text.length<=80?text:text.slice(0,77).replace(/\s+\S*$/,'')+'…';
   try{
     var res=await supa.from('prayers').insert({
       user_id:currentUser.id,
       title:title,
-      body:text.length>80?text:'',
+      body:text,
       category:'other',
       status:'ongoing',
       visibility:vis,
@@ -1414,7 +1414,7 @@ async function publishFirstPrayer(){
 function skipOb(){if(obStep===4){navTo('feed');return;}obStep++;updateOb();}
 function selTime(el){document.querySelectorAll('.time-opt').forEach(function(o){o.classList.remove('active');});el.classList.add('active');}
 function selVis(el){document.querySelectorAll('.vis-opt').forEach(function(v){v.classList.remove('active');});el.classList.add('active');}
-function checkFP(){var v=document.getElementById('fp-ta').value;document.getElementById('fp-cnt').textContent=v.length;fpOk=v.trim().length>=5;updateOb();}
+function checkFP(){var v=document.getElementById('fp-ta').value;document.getElementById('fp-cnt').textContent=v.length;fpOk=document.getElementById('fp-ttl').value.trim().length>=3;updateOb();}
 
 /* ═══════ FEED DATA ═══════ */
 var PRAYERS=[
@@ -2451,7 +2451,7 @@ function openRdvDeepLink(){
 /* ═══════ INIT ═══════ */
 applyLang();
 registerSW();
-document.getElementById('fp-ta').placeholder=t('fp_ph');
+document.getElementById('fp-ta').placeholder=t('fp_ph');document.getElementById('fp-ttl').placeholder=t('fp_ttl_ph');
 setTimeout(initPTR, 500);
 setTimeout(initFX, 200);
 
