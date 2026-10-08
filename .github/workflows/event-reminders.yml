@@ -7,33 +7,40 @@ on:
 
 jobs:
   remind:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Check upcoming events and send reminders
         run: |
-          curl -s "${{ secrets.SUPABASE_URL }}/rest/v1/prayer_events?select=id,title,scheduled_at&status=eq.approved&reminded=eq.false&scheduled_at=gte.$(date -u +%Y-%m-%dT%H:%M:%S)&scheduled_at=lte.$(date -u -d '+60 minutes' +%Y-%m-%dT%H:%M:%S)" \
+          # Fenêtre de recherche : de maintenant à +8 heures
+          # (GitHub ne lance pas vraiment le robot toutes les 15 min, plutôt toutes les 4 à 7 h)
+          NOW=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          LIMIT=$(date -u -d '+8 hours' +%Y-%m-%dT%H:%M:%SZ)
+
+          curl -s "${{ secrets.SUPABASE_URL }}/rest/v1/prayer_events?select=id,title,scheduled_at&status=eq.approved&reminded=eq.false&scheduled_at=gte.${NOW}&scheduled_at=lte.${LIMIT}" \
             -H "apikey: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
             -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" > events.json
 
-          echo "Événements à rappeler :"
+          echo "Événements à rappeler (entre $NOW et $LIMIT) :"
           cat events.json
+          echo ""
 
           node -e '
           const events = JSON.parse(require("fs").readFileSync("events.json", "utf8"));
+          if (!Array.isArray(events)) {
+            console.log("Réponse inattendue de Supabase, arrêt.");
+            process.exit(1);
+          }
 
-          async function processEvent(ev) {
-            const rsvpRes = await fetch(process.env.SUPA_URL + "/rest/v1/event_rsvps?select=user_id&event_id=eq." + ev.id, {
-              headers: { apikey: process.env.SERVICE_KEY, Authorization: "Bearer " + process.env.SERVICE_KEY }
-            });
-            const rsvps = await rsvpRes.json();
-            const userIds = rsvps.map(r => r.user_id);
-            if (userIds.length > 0) {
-              await fetch(process.env.SUPA_URL + "/functions/v1/send-push", {
-                method: "POST",
-                headers: { "Content-Type": "application/json", Authorization: "Bearer " + process.env.SERVICE_KEY },
-                body: JSON.stringify({ user_ids: userIds, title: "🙏 " + ev.title, body: "Ton rendez-vous de prière commence bientôt", url: "https://apppray.vercel.app/#rdv" })
-              });
+          // Texte du délai restant : "dans environ 3 h" ou "dans 25 min"
+          function delaiTexte(scheduledAt) {
+            const minutes = Math.round((new Date(scheduledAt).getTime() - Date.now()) / 60000);
+            if (minutes >= 60) {
+              return "commence dans environ " + Math.round(minutes / 60) + " h";
             }
+            return "commence dans " + Math.max(minutes, 1) + " min";
+          }
+
+          async function markReminded(ev) {
             await fetch(process.env.SUPA_URL + "/rest/v1/prayer_events?id=eq." + ev.id, {
               method: "PATCH",
               headers: { "Content-Type": "application/json", apikey: process.env.SERVICE_KEY, Authorization: "Bearer " + process.env.SERVICE_KEY, Prefer: "return=minimal" },
@@ -41,8 +48,44 @@ jobs:
             });
           }
 
+          async function processEvent(ev) {
+            const rsvpRes = await fetch(process.env.SUPA_URL + "/rest/v1/event_rsvps?select=user_id&event_id=eq." + ev.id, {
+              headers: { apikey: process.env.SERVICE_KEY, Authorization: "Bearer " + process.env.SERVICE_KEY }
+            });
+            if (!rsvpRes.ok) {
+              console.log("Échec lecture des participants pour " + ev.title + " — réessai au prochain passage.");
+              return;
+            }
+            const rsvps = await rsvpRes.json();
+            const userIds = rsvps.map(r => r.user_id);
+
+            if (userIds.length === 0) {
+              console.log("Aucun participant pour " + ev.title + " — marqué rappelé.");
+              await markReminded(ev);
+              return;
+            }
+
+            const message = "Ton rendez-vous de prière " + delaiTexte(ev.scheduled_at);
+            const pushRes = await fetch(process.env.SUPA_URL + "/functions/v1/send-push", {
+              method: "POST",
+              headers: { "Content-Type": "application/json", Authorization: "Bearer " + process.env.SERVICE_KEY },
+              body: JSON.stringify({ user_ids: userIds, title: "🙏 " + ev.title, body: message, url: "https://apppray.vercel.app/#rdv" })
+            });
+
+            // On ne marque "rappelé" que si l envoi a réussi
+            if (pushRes.ok) {
+              console.log("Rappel envoyé pour " + ev.title + " (" + userIds.length + " pers.) : " + message);
+              await markReminded(ev);
+            } else {
+              console.log("Échec envoi pour " + ev.title + " (code " + pushRes.status + ") — réessai au prochain passage.");
+            }
+          }
+
           (async () => {
-            for (const ev of events) { await processEvent(ev); }
+            for (const ev of events) {
+              try { await processEvent(ev); }
+              catch (e) { console.log("Erreur sur " + ev.title + " : " + e.message); }
+            }
           })();
           '
         env:
