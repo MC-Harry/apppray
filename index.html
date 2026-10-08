@@ -1354,8 +1354,62 @@ function updateOb(){
   if(obStep===4&&nb)nb.disabled=!fpOk; else if(nb)nb.disabled=false;
 }
 function nextOb(){
-  if(obStep===4){showToast('🙏',lang==='fr'?'Prière publiée — bienvenue !':'Prayer published — welcome!');setTimeout(function(){navTo('feed');},700);return;}
+  if(obStep===4){publishFirstPrayer();return;}
   obStep++;updateOb();
+}
+async function publishFirstPrayer(){
+  var text=document.getElementById('fp-ta').value.trim();
+  if(text.length<5)return;
+  // Mode démo (pas de compte) : comportement d'origine
+  if(!currentUser){
+    showToast('🙏',lang==='fr'?'Prière publiée — bienvenue !':'Prayer published — welcome!');
+    setTimeout(function(){navTo('feed');},700);return;
+  }
+  var nb=document.getElementById('ob-next');
+  nb.disabled=true;nb.innerHTML='<span class="ptr-spin"></span>';
+  // Visibilité choisie : 0 Monde, 1 Groupes, 2 Privé, 3 Anonyme
+  var opts=Array.prototype.slice.call(document.querySelectorAll('#obs4 .vis-opt'));
+  var idx=Math.max(0,opts.findIndex(function(o){return o.classList.contains('active');}));
+  var vis=['world','groups','private','world'][idx];
+  var anon=(idx===3);
+  // Titre = début du texte (80 caractères max), texte complet dans le corps
+  var title=text.length<=80?text:text.slice(0,77).replace(/\s+\S*$/,'')+'…';
+  try{
+    var res=await supa.from('prayers').insert({
+      user_id:currentUser.id,
+      title:title,
+      body:text.length>80?text:'',
+      category:'other',
+      status:'ongoing',
+      visibility:vis,
+      is_anonymous:anon,
+      country:currentProfile?currentProfile.country||'':'',
+      support_count:0
+    }).select().single();
+    if(res.error) throw res.error;
+    if(vis==='world'){
+      var np=res.data;
+      PRAYERS.unshift({
+        id:np.id,
+        user:anon?t('anon_u'):(currentProfile?currentProfile.display_name:'Moi'),
+        anon:anon,flag:'🌍',loc:np.country||'',
+        av:anon?'?':(currentProfile?currentProfile.avatar_letter:'?'),
+        col:anon?'#374151':(currentProfile?currentProfile.avatar_color:'#C8102E'),
+        time:{fr:"à l'instant",en:'just now'},
+        title:{fr:title,en:title},
+        body:{fr:np.body||'',en:np.body||''},
+        count:0,cat:'other',status:'ongoing',replies:0,vocal:false,online:true,update:null,
+        _real:true
+      });
+    }
+    nb.disabled=false;nb.textContent=t('ob_next')[3];
+    showToast('🙏',lang==='fr'?'Prière publiée — bienvenue !':'Prayer published — welcome!');
+    setTimeout(function(){navTo('feed');},700);
+  }catch(err){
+    console.error('Première prière:',err);
+    nb.disabled=false;nb.textContent=t('ob_next')[3];
+    showToast('⚠️',lang==='fr'?'Erreur de publication — réessayez':'Publication error — please try again');
+  }
 }
 function skipOb(){if(obStep===4){navTo('feed');return;}obStep++;updateOb();}
 function selTime(el){document.querySelectorAll('.time-opt').forEach(function(o){o.classList.remove('active');});el.classList.add('active');}
