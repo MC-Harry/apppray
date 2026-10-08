@@ -1116,7 +1116,7 @@ function toggleTerms(){termsOk=!termsOk;document.getElementById('terms-box').cla
 function checkSU(){
   var fn=document.getElementById('su-fn').value.trim().length>=2;
   var ln=document.getElementById('su-ln').value.trim().length>=2;
-  var em=/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(document.getElementById('su-em').value);
+  var em=/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(document.getElementById('su-em').value.trim());
   var pw=document.getElementById('su-pw').value.length>=8;
   var co=document.getElementById('su-co').value!=='';
   document.getElementById('su-btn').disabled=!(fn&&ln&&em&&pw&&co&&termsOk);
